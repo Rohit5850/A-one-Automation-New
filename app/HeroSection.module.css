@@ -1,0 +1,191 @@
+/* ---------------------------------------------------------
+   Electric-current animated background
+   Plain CSS Module — no styled-jsx, no runtime dependency.
+--------------------------------------------------------- */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fadeInUp {
+  animation: fadeInUp 0.8s ease-out both;
+}
+
+/* drifting grid */
+.gridAnimated {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(96, 165, 250, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 165, 250, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+  animation: gridDrift 20s linear infinite;
+}
+@keyframes gridDrift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 48px 48px;
+  }
+}
+
+/* flowing current lines */
+.electricSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: url(#glow);
+}
+.electricLine {
+  stroke: url(#electricPulse);
+  stroke-width: 1.5;
+  stroke-dasharray: 14 220;
+  opacity: 0.6;
+  animation: currentFlow 5s linear infinite;
+}
+.delay1 {
+  animation-delay: -1s;
+}
+.delay2 {
+  animation-delay: -2s;
+}
+.delay3 {
+  animation-delay: -3s;
+}
+.delay4 {
+  animation-delay: -4s;
+}
+@keyframes currentFlow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -234;
+  }
+}
+
+/* pulsing power nodes */
+.powerNode {
+  fill: #60a5fa;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nodePulse 2.4s ease-in-out infinite;
+}
+@keyframes nodePulse {
+  0%,
+  100% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+}
+
+/* floating particles */
+.particlesContainer {
+  position: absolute;
+  inset: 0;
+}
+.particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #60a5fa;
+  box-shadow: 0 0 8px 2px rgba(96, 165, 250, 0.8);
+  animation-name: particleFloat;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes particleFloat {
+  0% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-140px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* sparks */
+.sparksContainer {
+  position: absolute;
+  inset: 0;
+}
+.spark {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 0 10px 3px rgba(147, 197, 253, 0.9);
+  animation: sparkFlash 2.8s ease-in-out infinite;
+}
+@keyframes sparkFlash {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  10% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  20% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* expanding pulse rings */
+.pulseWave {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  animation: pulseExpand 6s ease-out infinite;
+}
+@keyframes pulseExpand {
+  0% {
+    width: 10px;
+    height: 10px;
+    opacity: 0.6;
+  }
+  100% {
+    width: 900px;
+    height: 900px;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gridAnimated,
+  .electricLine,
+  .powerNode,
+  .particle,
+  .spark,
+  .pulseWave,
+  .fadeInUp {
+    animation: none !important;
+  }
+}
