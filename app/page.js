@@ -10,7 +10,7 @@ import Footer from "./Components/Footer";
 export default function Home() {
   return (
     <>
-     <Navbar />
+     {/* <Navbar /> */}
      <HeroSection />
      <WhyChooseUs/>
      <Services />
@@ -18,7 +18,7 @@ export default function Home() {
 
      <CTASection />
 
-     <Footer />
+     {/* <Footer /> */}
     </>
   );
 }

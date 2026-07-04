@@ -1,5 +1,6 @@
 import { MapPin, ArrowRight } from "lucide-react";
 
+
 /**
  * Recent Projects Section
  *
@@ -25,7 +26,7 @@ const projects = [
       "Three-phase fire fighting control panel with automatic water pump control system for commercial complex.",
     location: "Indore, MP",
     category: "Control Panel",
-    image: "https://placehold.co/600x400/dc2626/ffffff?text=Control+Panel",
+    image: "/images/services/service_control_panel.jpg",
   },
   {
     id: 2,
@@ -34,7 +35,7 @@ const projects = [
       "Complete automation solution with Delta PLC programming for packaging machine control system.",
     location: "Pithampur, MP",
     category: "Automation",
-    image: "https://placehold.co/600x400/334155/ffffff?text=PLC+Automation",
+    image: "/images/services/service_plc.webp",
   },
   {
     id: 3,
@@ -43,7 +44,7 @@ const projects = [
       "Three-phase VFD control panel for energy-efficient cooling tower motor control with temperature sensing.",
     location: "Dewas, MP",
     category: "VFD Systems",
-    image: "https://placehold.co/600x400/e2e8f0/1e293b?text=VFD+Panel",
+    image: "/images/services/services_vfd.jpg",
   },
   {
     id: 4,
@@ -52,7 +53,7 @@ const projects = [
       "Delta HMI screen programming and integration with existing PLC system for real-time monitoring.",
     location: "Indore, MP",
     category: "HMI Solutions",
-    image: "https://placehold.co/600x400/1e3a8a/ffffff?text=HMI+Solutions",
+    image: "/images/services/services_hmi.jpg",
   },
   {
     id: 5,
@@ -61,7 +62,7 @@ const projects = [
       "Automatic Power Factor Correction panel to reduce electricity bills and improve power quality.",
     location: "Pithampur, MP",
     category: "Power Management",
-    image: "https://placehold.co/600x400/94a3b8/1e293b?text=APFC+Panel",
+    image: "/images/services/services_apfc.jpg",
   },
   {
     id: 6,
@@ -70,7 +71,7 @@ const projects = [
       "Complete PLC system diagnostics, repair, and firmware upgrade for improved performance.",
     location: "Indore, MP",
     category: "Repair Services",
-    image: "https://placehold.co/600x400/475569/ffffff?text=Repair+Services",
+    image: "/images/services/service_plc.webp",
   },
 ];
 

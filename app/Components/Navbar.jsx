@@ -13,13 +13,13 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   const menu = [
-    "Home",
-    "About",
-    "Services",
-    "Projects",
-    "Certifications",
-    "Contact",
-  ];
+  { label: "Home", href: "/" },
+  { label: "About", href: "/about" },
+  { label: "Services", href: "/services" },
+  { label: "Projects", href: "/projects" },
+  { label: "Certifications", href: "/certifications" },
+  { label: "Contact", href: "/Contact" },
+];
 
   return (
     <header className="w-full">
@@ -93,14 +93,14 @@ export default function Navbar() {
             {menu.map((item, index) => (
               <Link
                 key={item}
-                href="#"
+                href={item.href}
                 className={`rounded-xl px-3 py-1 text-[16px] font-medium transition-all duration-300 ${
                   index === 0
                     ? "bg-primary text-white"
                     : "text-secondary hover:bg-primary hover:text-white"
                 }`}
               >
-                {item}
+                {item.label}
               </Link>
             ))}
 
