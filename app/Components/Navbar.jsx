@@ -5,12 +5,15 @@ import Image from "next/image";
 import { HiOutlinePhone } from "react-icons/hi2";
 import { FiPhoneCall, FiMail } from "react-icons/fi";
 import { HiOutlineMenuAlt3, HiOutlineX } from "react-icons/hi";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 import logo from '@/public/images/logo.png'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [isSticky, setIsSticky] = useState(false);
+  const pathname = usePathname();
 
   const menu = [
   { label: "Home", href: "/" },
@@ -21,11 +24,21 @@ export default function Navbar() {
   { label: "Contact", href: "/Contact" },
 ];
 
+useEffect(() => {
+  const handleScroll = () => {
+    setIsSticky(window.scrollY > 38);
+  };
+
+  window.addEventListener("scroll", handleScroll);
+
+  return () => window.removeEventListener("scroll", handleScroll);
+}, []);
+
   return (
-    <header className="w-full">
+    <header className="w-full mb-[82px]">
 
       {/* Top Bar */}
-      <div className="bg-secondary text-white">
+      <div className=" bg-secondary text-white">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-2">
 
           <div className="hidden gap-6 text-sm md:flex">
@@ -57,7 +70,7 @@ export default function Navbar() {
 
       {/* Main Navbar */}
 
-      <div className="bg-white shadow-sm">
+      <div className={`fixed top-0 left-0 right-0 z-[999] bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${  isSticky  ? "translate-y-0 shadow-xl"  : "translate-y-[38px] shadow-sm" }`} >
 
         <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between px-5">
 
@@ -95,7 +108,7 @@ export default function Navbar() {
                 key={item}
                 href={item.href}
                 className={`rounded-xl px-3 py-1 text-[16px] font-medium transition-all duration-300 ${
-                  index === 0
+                  pathname === item.href
                     ? "bg-primary text-white"
                     : "text-secondary hover:bg-primary hover:text-white"
                 }`}

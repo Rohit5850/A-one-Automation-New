@@ -5,9 +5,6 @@ export default function ContactHero() {
   return (
     <section className="relative w-full overflow-hidden">
 
-      {/* Page Width */}
-      <div className="max-w-[1500px] mx-auto relative h-[260px] sm:h-[320px] md:h-[400px] lg:h-[450px]">
-
         {/* Background Image */}
         <Image
           src="/images/contact/banner_img.png"
@@ -20,10 +17,15 @@ export default function ContactHero() {
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#071528]/95 via-[#071528]/75 to-transparent" />
 
+      {/* Page Width */}
+      <div className="max-w-[1500px] mx-auto relative h-[260px] sm:h-[320px] md:h-[400px] lg:h-[450px]">
+
+      
+
         {/* Content */}
         <div className="absolute inset-0 flex items-center">
 
-          <div className="w-full max-w-[1500px] mx-auto px-5 sm:px-8 lg:px-16">
+          <div className="w-full max-w-[1500px] mx-auto px-5 sm:px-8 lg:px-0">
 
             <div className="max-w-xl">
 

@@ -41,7 +41,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-secondary text-white">
-      <div className="mx-auto max-w-[1500px] px-5 py-20">
+      <div className="mx-auto max-w-[1500px] px-5 py-20 pb-10">
 
         <div className="grid gap-14 md:grid-cols-2 xl:grid-cols-4">
 
@@ -57,11 +57,11 @@ export default function Footer() {
               className="rounded-lg bg-white p-2"
             />
 
-            <h3 className="mt-7 text-3xl font-bold">
+            <h3 className="mt-7 text-[21px] font-bold">
               A-One Automation Solution
             </h3>
 
-            <p className="mt-5 text-lg leading-8 text-gray-300">
+            <p className="mt-5 text-[16px] leading-8 text-gray-300">
               Expert Industrial Automation &
               Electrical Control Solutions.
             </p>
@@ -73,7 +73,7 @@ export default function Footer() {
                 size={22}
               />
 
-              <p className="text-gray-300 leading-8">
+              <p className="text-gray-300 leading-8 text-[16px]">
                 Sanskar Valley,
                 Sector No. 1,
                 Pithampur,
@@ -89,7 +89,7 @@ export default function Footer() {
 
           <div>
 
-            <h3 className="mb-8 text-3xl font-bold">
+            <h3 className="mb-8 text-[21px] font-bold">
               Quick Links
             </h3>
 
@@ -100,7 +100,7 @@ export default function Footer() {
                 <Link
                   key={index}
                   href="#"
-                  className="block text-lg text-gray-300 transition hover:text-primary"
+                  className="block text-[16px] text-gray-300 transition hover:text-primary"
                 >
                   {item}
                 </Link>
@@ -115,7 +115,7 @@ export default function Footer() {
 
           <div>
 
-            <h3 className="mb-8 text-3xl font-bold">
+            <h3 className="mb-8 text-[21px] font-bold">
               Our Services
             </h3>
 
@@ -126,7 +126,7 @@ export default function Footer() {
                 <Link
                   key={index}
                   href="#"
-                  className="block text-lg text-gray-300 transition hover:text-primary"
+                  className="block text-[16px] text-gray-300 transition hover:text-primary"
                 >
                   {item}
                 </Link>
@@ -141,7 +141,7 @@ export default function Footer() {
 
           <div>
 
-            <h3 className="mb-8 text-3xl font-bold">
+            <h3 className="mb-8 text-[21px] font-bold">
               Get In Touch
             </h3>
 
@@ -156,7 +156,7 @@ export default function Footer() {
 
                 <a
                   href="tel:+917489174850"
-                  className="text-lg text-gray-300 hover:text-primary"
+                  className="text-[16px] text-gray-300 hover:text-primary"
                 >
                   +91-7489174850
                 </a>
@@ -172,7 +172,7 @@ export default function Footer() {
 
                 <a
                   href="mailto:aoneautomation.92@gmail.com"
-                  className="text-lg text-gray-300 hover:text-primary"
+                  className="text-[16px] text-gray-300 hover:text-primary"
                 >
                   aoneautomation.92@gmail.com
                 </a>
@@ -181,7 +181,7 @@ export default function Footer() {
 
             </div>
 
-            <h4 className="mt-10 mb-6 text-2xl font-bold">
+            <h4 className="mt-10 mb-6 text-[21px] font-bold">
               Find Us Online
             </h4>
 
@@ -192,7 +192,7 @@ export default function Footer() {
                 <Link
                   key={index}
                   href={item.link}
-                  className="flex items-center gap-3 text-lg text-gray-300 transition hover:text-primary"
+                  className="flex items-center gap-3 text-[16px] text-gray-300 transition hover:text-primary"
                 >
                   <ExternalLink size={18} />
                   {item.title}
@@ -212,12 +212,12 @@ export default function Footer() {
 
           <div className="flex flex-col items-center justify-between gap-5 md:flex-row">
 
-            <p className="text-gray-400">
+            <p className="text-gray-400 text-[14px]">
               © 2026 Perfect Electrical Solutions.
               All Rights Reserved.
             </p>
 
-            <p className="text-gray-400">
+            <p className="text-gray-400 text-[14px]">
               GST : 23DTVPK2579B1ZG
             </p>
 

@@ -2,16 +2,16 @@ import { Phone, ArrowRight } from "lucide-react";
 
 export default function CTASection() {
   return (
-    <section className="bg-primary py-24">
+    <section className="bg-primary py-15">
       <div className="mx-auto max-w-[1500px] px-5">
 
         <div className="mx-auto max-w-4xl text-center">
 
-          <h2 className="text-4xl font-bold text-white md:text-5xl">
+          <h2 className="text-[32px] font-bold text-white ">
             Ready to Start Your Project?
           </h2>
 
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-white/90">
+          <p className="mx-auto mt-5 max-w-2xl text-[18px] leading-8 text-white/90">
             Get expert consultation and competitive quotes for your
             electrical and automation needs.
           </p>

@@ -77,14 +77,14 @@ const projects = [
 
 export default function RecentProjects() {
   return (
-    <section className="bg-slate-50 py-20">
+    <section className="bg-slate-50 py-20 pt-0">
       <div className="mx-auto max-w-[1500px] px-4">
         {/* Heading */}
         <div className="mb-12 text-center">
-          <h2 className="text-4xl font-bold text-slate-900 md:text-5xl">
+          <h2 className="text-[32px] font-bold text-slate-900">
             Recent Projects
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-500">
+          <p className="mx-auto mt-4 max-w-2xl text-[18px] text-slate-500">
             Real work, real results. See our completed projects across
             various industries.
           </p>
@@ -112,10 +112,10 @@ export default function RecentProjects() {
 
               {/* Content */}
               <div className="p-6">
-                <h3 className="text-lg font-bold text-slate-900">
+                <h3 className="text-[21px] font-bold text-slate-900">
                   {project.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                <p className="mt-2 text-[16px] leading-relaxed text-slate-500">
                   {project.description}
                 </p>
                 <div className="mt-4 flex items-center gap-1.5 text-sm text-slate-500">

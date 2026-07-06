@@ -40,14 +40,14 @@ export default function WhyChooseUs() {
 
         <div className="text-center">
 
-          <h2 className="text-3xl font-bold text-secondary md:text-5xl">
+          <h2 className="text-[32px] font-bold text-secondary">
             Why Choose{" "}
             <span className="text-primary">
               A-one Automation Solution
             </span>
           </h2>
 
-          <p className="mx-auto mt-4 max-w-3xl text-lg text-gray-600">
+          <p className="mx-auto mt-4 max-w-3xl text-[18px] text-gray-600">
             Trusted partner for industrial automation and
             electrical solutions across Madhya Pradesh
           </p>
@@ -76,11 +76,11 @@ export default function WhyChooseUs() {
                   />
                 </div>
 
-                <h3 className="mt-8 text-3xl font-bold text-secondary">
+                <h3 className="mt-8 text-[21px] font-bold text-secondary">
                   {item.title}
                 </h3>
 
-                <p className="mt-5 text-lg leading-9 text-gray-600">
+                <p className="mt-5 text-[18px] leading-9 text-gray-600">
                   {item.description}
                 </p>
               </div>
