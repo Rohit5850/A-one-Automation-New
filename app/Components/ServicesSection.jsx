@@ -11,7 +11,7 @@ import {
 
 
 
-export default function Services() {
+export default function ServicesSection() {
   const services = [
     {
       id: 1,

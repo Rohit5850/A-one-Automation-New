@@ -10,7 +10,7 @@ const certificationHeroData = {
 
 export default function CertificationHeroSection() {
   return (
-    <section className="relative overflow-hidden bg-[#162238] py-28">
+    <section className="relative overflow-hidden bg-[#162238] py-15">
       {/* Background Effects */}
 
       <div className="absolute inset-0">
@@ -44,7 +44,7 @@ export default function CertificationHeroSection() {
 
           {/* Title */}
 
-          <h1 className="text-5xl font-bold leading-tight text-white lg:text-6xl">
+          <h1 className="text-[32px] font-bold leading-tight text-white">
 
             {certificationHeroData.title.normal}
 
@@ -56,13 +56,13 @@ export default function CertificationHeroSection() {
 
           {/* Description */}
 
-          <p className="mt-8 max-w-3xl text-xl leading-9 text-slate-300">
+          <p className="mt-4 max-w-[full] text-[18px] leading-9 text-slate-300">
             {certificationHeroData.description}
           </p>
 
           {/* Accent Line */}
 
-          <div className="mt-10 h-1 w-28 rounded-full bg-[#ef233c]" />
+          <div className="mt-4 h-1 w-28 rounded-full bg-[#ef233c]" />
 
         </div>
 

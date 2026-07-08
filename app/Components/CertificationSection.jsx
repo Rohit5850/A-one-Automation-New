@@ -79,9 +79,9 @@ export default function CertificationSection() {
 
         {/* Heading */}
 
-        <div className="mb-20 text-center">
+        <div className="mb-10 text-center">
 
-          <h2 className="text-4xl font-bold text-[#162238] lg:text-5xl">
+          <h2 className="text-[32px] font-bold text-[#162238]">
 
             {certificationData.title.normal}
 
@@ -91,7 +91,7 @@ export default function CertificationSection() {
 
           </h2>
 
-          <p className="mt-5 text-lg text-slate-600">
+          <p className="mt-2 text-[18px] text-slate-600">
 
             {certificationData.subtitle}
 
@@ -127,7 +127,7 @@ export default function CertificationSection() {
 
                 {/* Title */}
 
-                <h3 className="mt-8 text-3xl font-bold text-[#162238]">
+                <h3 className="mt-8 text-[21px] font-bold text-[#162238]">
 
                   {item.title}
 
@@ -143,7 +143,7 @@ export default function CertificationSection() {
 
                 {/* Description */}
 
-                <p className="mt-6 leading-8 text-slate-600">
+                <p className="mt-6 text-[18px] leading-8 text-slate-600">
 
                   {item.description}
 

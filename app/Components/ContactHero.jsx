@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function ContactHero() {
   return (
-    <section className="relative w-full overflow-hidden">
+    <section className="relative w-full overflow-hidden py-10 md:py-0">
 
         {/* Background Image */}
         <Image
@@ -27,7 +27,7 @@ export default function ContactHero() {
 
           <div className="w-full max-w-[1500px] mx-auto px-5 sm:px-8 lg:px-0">
 
-            <div className="max-w-xl">
+            <div className="max-w-full">
 
               {/* Badge */}
 
@@ -37,10 +37,7 @@ export default function ContactHero() {
 
               {/* Heading */}
 
-              <h1 className="mt-6 text-white font-bold leading-tight
-              text-4xl
-              sm:text-5xl
-              md:text-6xl">
+              <h1 className="mt-6 text-white font-bold leading-tight  text-[32px]">
 
                 Get In Touch
 
@@ -48,9 +45,7 @@ export default function ContactHero() {
 
               {/* Paragraph */}
 
-              <p className="mt-5 text-gray-300 leading-8
-              text-base
-              md:text-lg">
+              <p className="mt-5 text-gray-300 leading-8 text-[18px]">
 
                 We are here to help you with the best industrial automation
                 and electrical solutions.

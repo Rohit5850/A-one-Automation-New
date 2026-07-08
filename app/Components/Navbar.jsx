@@ -34,8 +34,20 @@ useEffect(() => {
   return () => window.removeEventListener("scroll", handleScroll);
 }, []);
 
+useEffect(() => {
+  if (open) {
+    document.body.style.overflow = "hidden";
+  } else {
+    document.body.style.overflow = "";
+  }
+
+  return () => {
+    document.body.style.overflow = "";
+  };
+}, [open]);
+
   return (
-    <header className="w-full mb-[82px]">
+    <header className="w-full mb-[82px] relative">
 
       {/* Top Bar */}
       <div className=" bg-secondary text-white">
@@ -83,6 +95,7 @@ useEffect(() => {
               alt="Logo"
               width={52}
               height={52}
+              loading="eager"
             />
 
             <div>
@@ -105,7 +118,7 @@ useEffect(() => {
 
             {menu.map((item, index) => (
               <Link
-                key={item}
+                key={index}
                 href={item.href}
                 className={`rounded-xl px-3 py-1 text-[16px] font-medium transition-all duration-300 ${
                   pathname === item.href
@@ -150,18 +163,24 @@ useEffect(() => {
 
       {open && (
 
-        <div className="border-t bg-white lg:hidden">
+        <div className={`fixed top-[80px] left-0 right-0 z-[999] bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${  isSticky  ? "translate-y-0 shadow-xl"  : "translate-y-[38px] shadow-sm" }`}>
 
-          <div className="space-y-2 p-5">
+          <div className="space-y-2 p-5 flex flex-col">
 
             {menu.map((item) => (
 
               <Link
-                key={item}
-                href="#"
-                className="block rounded-lg px-4 py-3 font-medium text-secondary hover:bg-primary hover:text-white"
+                key={item.label}
+                href={item.href}
+                // className="block rounded-lg px-4 py-3 font-medium text-secondary hover:bg-primary hover:text-white"
+                 className={`rounded-xl px-3 py-1 text-[16px] font-medium transition-all duration-300 ${
+                  pathname === item.href
+                    ? "text-primary "
+                    : "text-secondary hover:text-primary"
+                }`}
+                 onClick={() => setOpen(false)}
               >
-                {item}
+                {item.label}
               </Link>
 
             ))}

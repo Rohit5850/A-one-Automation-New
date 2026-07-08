@@ -191,7 +191,7 @@ export default function ProjectsFilterSection() {
 
         {/* Count */}
 
-        <div className="mb-8 text-sm font-medium text-slate-600">
+        <div className="mb-8 text-sm font-medium text-slate-600 border-t pt-[30px] border-gray-300">
 
           Showing
           <span className="mx-1 font-bold text-[#ef233c]">
@@ -242,7 +242,7 @@ export default function ProjectsFilterSection() {
 
       <div className="absolute bottom-6 left-6 right-6">
 
-        <h3 className="text-3xl font-bold leading-tight text-white">
+        <h3 className="text-[21px] font-bold leading-tight text-white">
           {project.title}
         </h3>
 
@@ -254,7 +254,7 @@ export default function ProjectsFilterSection() {
 
     <div className="p-7">
 
-      <p className="leading-8 text-slate-600">
+      <p className="leading-8 text-[18px] text-slate-600">
         {project.description}
       </p>
 

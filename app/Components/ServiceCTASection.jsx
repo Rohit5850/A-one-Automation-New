@@ -19,7 +19,7 @@ const ctaData = {
 
 export default function ServiceCTASection() {
   return (
-    <section className="relative overflow-hidden bg-[#162238] py-24">
+    <section className="relative overflow-hidden bg-[#162238] py-12">
       {/* Background Glow */}
       <div className="absolute inset-0">
         <div className="absolute left-0 top-0 h-96 w-96 rounded-full bg-red-500/10 blur-[140px]" />
@@ -44,7 +44,7 @@ export default function ServiceCTASection() {
 
           {/* Heading */}
 
-          <h2 className="text-4xl font-bold text-white lg:text-5xl">
+          <h2 className="text-[32px] font-bold text-white">
 
             {ctaData.title.normal}
 
@@ -56,7 +56,7 @@ export default function ServiceCTASection() {
 
           {/* Description */}
 
-          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-300">
+          <p className="mx-auto mt-6 max-w-3xl text-[18px] leading-8 text-slate-300">
             {ctaData.description}
           </p>
 

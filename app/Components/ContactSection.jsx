@@ -275,10 +275,10 @@ export default function ContactSection() {
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 lg:flex-row lg:items-stretch lg:gap-6">
         {/* Left: Form Card */}
         <div className="w-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8 lg:w-[65%]">
-          <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+          <h2 className="text-[32px] font-bold text-gray-900">
             {formData.heading}
           </h2>
-          <p className="mt-2 text-sm text-gray-500 sm:text-base">
+          <p className="mt-2 text-[18px] text-gray-500">
             {formData.subheading}
           </p>
 
@@ -332,7 +332,7 @@ export default function ContactSection() {
 
         {/* Right: Contact Info Card */}
         <div className="w-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8 lg:w-[35%]">
-          <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+          <h2 className="text-[32px] font-bold text-gray-900">
             {infoData.heading}
           </h2>
 

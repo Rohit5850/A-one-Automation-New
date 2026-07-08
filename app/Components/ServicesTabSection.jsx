@@ -217,7 +217,7 @@ export default function ServicesTabSection() {
 
         {/* Title */}
         <div className="absolute bottom-6 left-24 right-6">
-          <h3 className="text-[30px] font-bold leading-tight text-white">
+          <h3 className="text-[21px] font-bold leading-tight text-white">
             {service.title}
           </h3>
         </div>
@@ -225,7 +225,7 @@ export default function ServicesTabSection() {
 
       {/* Content */}
       <div className="p-7">
-        <p className="leading-8 text-gray-600">
+        <p className="leading-8 text-[18px] text-gray-600">
           {service.description}
         </p>
 

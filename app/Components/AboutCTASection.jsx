@@ -28,7 +28,7 @@ const ctaData = {
 
 export default function AboutCTASection() {
   return (
-    <section className="w-full bg-[#ff1b2d] py-16 relative overflow-hidden">
+    <section className="w-full bg-[#ff1b2d] py-12 relative overflow-hidden">
 
       {/* Background Blur */}
 
@@ -42,7 +42,7 @@ export default function AboutCTASection() {
 
           {/* Left */}
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-start md:items-center gap-6 flex-col md:flex-row">
 
             <div className="flex h-24 w-24 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md">
 
@@ -56,11 +56,11 @@ export default function AboutCTASection() {
 
             <div>
 
-              <h2 className="text-4xl font-bold text-white">
+              <h2 className="text-[28px] font-bold text-white">
                 {ctaData.title}
               </h2>
 
-              <p className="mt-3 max-w-2xl text-lg text-red-100">
+              <p className="mt-3 max-w-2xl text-[16px] text-red-100">
                 {ctaData.description}
               </p>
 

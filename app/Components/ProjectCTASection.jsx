@@ -19,10 +19,10 @@ const projectCTAData = {
 
 export default function ProjectCTASection() {
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-white py-20">
       <div className="mx-auto w-full max-w-[1500px] px-5 lg:px-8">
 
-        <div className="relative overflow-hidden rounded-[32px] bg-[#162238] px-8 py-24 lg:px-20">
+        <div className="relative overflow-hidden rounded-[32px] bg-[#162238] px-8 py-10 lg:px-20">
 
           {/* Background Grid */}
 
@@ -49,7 +49,7 @@ export default function ProjectCTASection() {
 
             {/* Heading */}
 
-            <h2 className="text-4xl font-bold leading-tight text-white lg:text-6xl">
+            <h2 className="text-[32px] font-bold leading-tight text-white">
 
               {projectCTAData.title.normal}
 
@@ -61,7 +61,7 @@ export default function ProjectCTASection() {
 
             {/* Description */}
 
-            <p className="mx-auto mt-8 max-w-3xl text-lg leading-9 text-slate-300">
+            <p className="mx-auto mt-2 max-w-3xl text-[18px] leading-9 text-slate-300">
               {projectCTAData.description}
             </p>
 

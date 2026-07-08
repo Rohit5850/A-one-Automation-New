@@ -127,13 +127,13 @@ export default function AboutTechnologiesSection() {
                     className="object-contain"
                   />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 mb-2">
+                <h3 className="text-[16px] font-bold text-slate-900 mb-2">
                   {tech.title}
                 </h3>
                 <ul className="text-xs text-slate-500 space-y-1 text-left w-full">
                   {tech.items.map((item, j) => (
-                    <li key={j} className="flex items-start gap-1.5">
-                      <span className="mt-1.5 w-1 h-1 rounded-full bg-slate-400 shrink-0" />
+                    <li key={j} className="flex items-center gap-1.5 text-[14px]">
+                      <span className="w-1 h-1 rounded-full bg-slate-400 shrink-0" />
                       {item}
                     </li>
                   ))}
@@ -150,7 +150,7 @@ export default function AboutTechnologiesSection() {
             <span className="text-red-500">{processData.heading.highlight}</span>
           </h2>
 
-          <div className="flex flex-wrap items-start justify-center gap-y-8">
+          <div className="flex flex-wrap items-start justify-center gap-x-8 gap-y-8 md:gap-y-8 md:gap-x-0">
             {processData.steps.map((step, i) => {
               const Icon = processIconMap[step.icon];
               const isLast = i === processData.steps.length - 1;

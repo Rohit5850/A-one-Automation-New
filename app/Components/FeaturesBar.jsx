@@ -51,8 +51,8 @@ export default function FeaturesBar() {
                   <Icon className="h-6 w-6 text-red-500" strokeWidth={2} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">{item.title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                  <h3 className="font-bold text-gray-900 text-[21px]">{item.title}</h3>
+                  <p className="mt-1 text-[16px] leading-relaxed text-gray-500">
                     {item.description}
                   </p>
                 </div>

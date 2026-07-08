@@ -2,10 +2,10 @@ import Image from "next/image";
 import Navbar from "./Components/Navbar";
 import HeroSection from "./Components/HeroSection";
 import WhyChooseUs from "./Components/WhyChooseUs";
-import Services from "./Components/Services";
 import RecentProjects from "./Components/RecentProjects";
 import CTASection from "./Components/CTASection";
 import Footer from "./Components/Footer";
+import ServicesSection from "./Components/ServicesSection";
 
 export default function Home() {
   return (
@@ -13,9 +13,8 @@ export default function Home() {
      {/* <Navbar /> */}
      <HeroSection />
      <WhyChooseUs/>
-     <Services />
+     <ServicesSection />
      <RecentProjects />
-
      <CTASection />
 
      {/* <Footer /> */}

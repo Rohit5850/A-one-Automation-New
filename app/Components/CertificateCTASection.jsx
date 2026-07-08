@@ -23,7 +23,7 @@ export default function CertificateCTASection() {
   const Icon = trustCTAData.icon;
 
   return (
-    <section className="relative overflow-hidden bg-[#162238] py-24">
+    <section className="relative overflow-hidden bg-[#162238] py-12">
 
       {/* Grid */}
 
@@ -69,7 +69,7 @@ export default function CertificateCTASection() {
 
           {/* Heading */}
 
-          <h2 className="mt-10 text-4xl font-bold text-white lg:text-6xl">
+          <h2 className="mt-5 text-[32px] font-bold text-white">
 
             {trustCTAData.title.normal}
 
@@ -81,7 +81,7 @@ export default function CertificateCTASection() {
 
           {/* Description */}
 
-          <p className="mx-auto mt-8 max-w-3xl text-lg leading-9 text-slate-300">
+          <p className="mx-auto mt-5 max-w-3xl text-[18px] leading-9 text-slate-300">
 
             {trustCTAData.description}
 
@@ -93,7 +93,7 @@ export default function CertificateCTASection() {
 
             <a
               href={trustCTAData.button.link}
-              className="group inline-flex items-center gap-3 rounded-xl bg-[#ef233c] px-10 py-5 text-lg font-semibold text-white transition-all duration-300 hover:-translate-y-1 hover:bg-red-600 hover:shadow-2xl hover:shadow-red-500/30"
+              className="group inline-flex items-center gap-3 rounded-xl bg-[#ef233c] px-10 py-5 text-[16px] font-semibold text-white transition-all duration-300 hover:-translate-y-1 hover:bg-red-600 hover:shadow-2xl hover:shadow-red-500/30"
             >
               {trustCTAData.button.text}
 

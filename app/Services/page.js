@@ -14,7 +14,7 @@ export const metadata = {
   },
 };
 
-export default function services() {
+export default function ServicesPage() {
   return (
   <>
   <ServiceHeroSection />

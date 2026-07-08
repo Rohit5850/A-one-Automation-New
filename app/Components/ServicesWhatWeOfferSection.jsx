@@ -70,7 +70,7 @@ export default function ServicesWhatWeOfferSection() {
         {/* Heading */}
 
         <div className="mx-auto mb-16 max-w-3xl text-center">
-          <h2 className="text-4xl font-bold text-[#162238] lg:text-5xl">
+          <h2 className="text-[32px] font-bold text-[#162238] ">
             {offerData.title.normal}
 
             <span className="text-[#ef233c]">
@@ -78,7 +78,7 @@ export default function ServicesWhatWeOfferSection() {
             </span>
           </h2>
 
-          <p className="mt-5 text-lg text-slate-600">
+          <p className="mt-5 text-[18px] text-slate-600">
             {offerData.subtitle}
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function ServicesWhatWeOfferSection() {
             return (
               <div
                 key={card.id}
-                className="group rounded-2xl border border-slate-200 bg-[#f8fafc] p-10 text-center transition-all duration-500 hover:-translate-y-2 hover:border-red-200 hover:shadow-2xl"
+                className="group rounded-2xl border border-slate-200 bg-[#f8fafc] p-5 text-center transition-all duration-500 hover:-translate-y-2 hover:border-red-200 hover:shadow-2xl"
               >
                 {/* Icon */}
 
@@ -108,13 +108,13 @@ export default function ServicesWhatWeOfferSection() {
 
                 {/* Title */}
 
-                <h3 className="mt-8 text-2xl font-bold text-[#162238] transition duration-300 group-hover:text-[#ef233c]">
+                <h3 className="mt-8 text-[21px] font-bold text-[#162238] transition duration-300 group-hover:text-[#ef233c]">
                   {card.title}
                 </h3>
 
                 {/* Description */}
 
-                <p className="mt-4 leading-8 text-slate-600">
+                <p className="mt-4 leading-8 text-[18px] text-slate-600">
                   {card.description}
                 </p>
 

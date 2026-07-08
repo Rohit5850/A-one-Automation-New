@@ -47,12 +47,12 @@ export default function AboutFAQSection() {
   const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <section className="w-full bg-white py-24">
+    <section className="w-full bg-white py-24 pt-0">
       <div className="mx-auto w-full max-w-[1500px] px-5 lg:px-8">
         {/* Heading */}
 
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-slate-900">
+          <h2 className="text-[32px] font-bold text-slate-900">
             {faqData.title.normal}
             <span className="text-red-500">
               {faqData.title.highlight}

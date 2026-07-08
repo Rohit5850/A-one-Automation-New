@@ -87,15 +87,15 @@ const colorClasses = {
 
 export default function SafetyQualitySection() {
   return (
-    <section className="bg-white py-24">
+    <section className="bg-white py-24 pt-0">
 
       <div className="mx-auto w-full max-w-[1500px] px-5 lg:px-8">
 
         {/* Heading */}
 
-        <div className="mb-20 text-center">
+        <div className="mb-10 text-center">
 
-          <h2 className="text-4xl font-bold text-[#162238] lg:text-5xl">
+          <h2 className="text-[32px] font-bold text-[#162238] ">
 
             {safetyData.title.normal}
 
@@ -105,7 +105,7 @@ export default function SafetyQualitySection() {
 
           </h2>
 
-          <p className="mx-auto mt-5 max-w-3xl text-lg leading-8 text-slate-600">
+          <p className="mx-auto mt-5 max-w-3xl text-[18px] leading-8 text-slate-600">
             {safetyData.subtitle}
           </p>
 
@@ -113,7 +113,7 @@ export default function SafetyQualitySection() {
 
         {/* Cards */}
 
-        <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
 
           {safetyData.items.map((item) => {
 
@@ -125,7 +125,7 @@ export default function SafetyQualitySection() {
 
               <div
                 key={item.id}
-                className="group rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm transition-all duration-500 hover:-translate-y-2 hover:border-red-200 hover:shadow-2xl"
+                className="group rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm transition-all duration-500 hover:-translate-y-2 hover:border-red-200 hover:shadow-2xl"
               >
 
                 {/* Icon */}
@@ -141,7 +141,7 @@ export default function SafetyQualitySection() {
 
                 {/* Title */}
 
-                <h3 className="mt-8 text-3xl font-bold text-[#162238]">
+                <h3 className="mt-8 text-[21px] font-bold text-[#162238]">
                   {item.title}
                 </h3>
 
@@ -151,7 +151,7 @@ export default function SafetyQualitySection() {
 
                 {/* Description */}
 
-                <p className="leading-8 text-slate-600">
+                <p className="leading-8 text-[18px] text-slate-600">
                   {item.description}
                 </p>
 

@@ -73,7 +73,7 @@ export default function AboutTrustSection() {
                   <span className="flex items-center justify-center w-8 h-8 rounded-md bg-red-600 shrink-0">
                     <Icon className="w-4 h-4 text-white" />
                   </span>
-                  <span className="text-sm font-medium text-slate-200">
+                  <span className="text-[18px] font-medium text-slate-200">
                     {f.label}
                   </span>
                 </div>

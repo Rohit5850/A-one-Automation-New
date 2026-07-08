@@ -85,7 +85,7 @@ export default function AboutQualitySection() {
 
           <div>
 
-            <h2 className="text-4xl font-bold text-slate-900">
+            <h2 className="text-[28px] font-bold text-slate-900">
 
               {sectionData.title.normal}
 
@@ -103,7 +103,7 @@ export default function AboutQualitySection() {
 
             </div>
 
-            <div className="mt-10 grid grid-cols-[220px_1fr] gap-6">
+            <div className="mt-10 grid grid-cols-[1fr_1fr] md:grid-cols-[220px_1fr] gap-6">
 
               {/* Image */}
 
@@ -157,7 +157,7 @@ export default function AboutQualitySection() {
 
           <div>
 
-            <h2 className="text-4xl font-bold text-slate-900">
+            <h2 className="text-[28px] font-bold text-slate-900">
 
               {sectionData.brandsTitle.normal}
 

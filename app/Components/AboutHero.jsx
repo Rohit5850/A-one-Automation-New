@@ -10,7 +10,7 @@ import { Phone, ArrowRight } from "lucide-react";
 const aboutSectionData = {
   badge: "Trusted Automation Experts",
   heading: {
-    lines: ["About Us", "Building Smart Industrial"],
+    lines: ["About Us Building Smart Industrial"],
     highlight: "Automation Solutions"
   },
   description:
@@ -55,7 +55,7 @@ export default function AboutHero() {
             </div>
 
             {/* Heading */}
-            <h1 className="text-4xl sm:text-5xl xl:text-[52px] font-bold leading-[1.15] text-white">
+            <h1 className="text-[32px]  font-bold leading-[1.15] text-white">
               {heading.lines.map((line, i) => (
                 <span key={i}>
                   {line}
@@ -66,7 +66,7 @@ export default function AboutHero() {
             </h1>
 
             {/* Description */}
-            <p className="mt-6 max-w-xl text-slate-400 text-base sm:text-lg leading-relaxed">
+            <p className="mt-6 max-w-full text-slate-400 text-[18px] leading-relaxed">
               {description}
             </p>
 

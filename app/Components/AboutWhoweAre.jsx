@@ -123,7 +123,7 @@ export default function AboutWhoweAre() {
 
               {/* Text */}
               <div>
-                <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900">
+                <h2 className="text-[28px] font-bold text-slate-900">
                   {intro.heading.normal}
                   <span className="text-red-500">{intro.heading.highlight}</span>
                 </h2>
@@ -164,7 +164,7 @@ export default function AboutWhoweAre() {
 
           {/* Our Journey card */}
           <div className="rounded-2xl border border-slate-200 p-6 sm:p-8">
-            <h2 className="text-2xl sm:text-[28px] font-bold text-slate-900 mb-6">
+            <h2 className="text-[28px] font-bold text-slate-900 mb-6">
               {journey.heading.normal}
               <span className="text-red-500">{journey.heading.highlight}</span>
             </h2>
@@ -196,14 +196,14 @@ export default function AboutWhoweAre() {
                   >
                     <Icon className={`w-5 h-5 ${card.iconColor}`} />
                   </span>
-                  <h3 className="text-xl font-bold text-slate-900">
+                  <h2 className="text-[28px] font-bold text-slate-900">
                     {card.heading.normal}
                     <span className="text-red-500">{card.heading.highlight}</span>
-                  </h3>
+                  </h2>
                 </div>
 
                 {card.body && (
-                  <p className="text-sm text-slate-500 leading-relaxed">
+                  <p className="text-[18px] text-slate-500 leading-relaxed">
                     {card.body}
                   </p>
                 )}
@@ -213,7 +213,7 @@ export default function AboutWhoweAre() {
                     {card.list.map((item, j) => (
                       <li
                         key={j}
-                        className="flex items-center gap-2 text-sm text-slate-600"
+                        className="flex items-center gap-2 text-[18px] text-slate-600"
                       >
                         <Plus className="w-3.5 h-3.5 text-red-500 shrink-0" />
                         {item}

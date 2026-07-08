@@ -57,10 +57,10 @@ function StatItem({ stat, isLast, shouldStart }) {
         !isLast ? "sm:border-r sm:border-white/10" : ""
       }`}
     >
-      <p className="text-3xl sm:text-4xl font-extrabold text-red-500 tracking-tight">
+      <p className="text-[32px]  font-extrabold text-red-500 tracking-tight">
         {stat.static ? stat.static : `${count}${stat.suffix}`}
       </p>
-      <p className="mt-2 text-xs sm:text-sm font-medium text-slate-300">
+      <p className="mt-2 text-[16px] font-medium text-white">
         {stat.label}
       </p>
     </div>

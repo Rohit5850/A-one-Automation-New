@@ -10,7 +10,7 @@ const pageBannerData = {
 
 export default function ProjectHeroSection() {
   return (
-    <section className="relative overflow-hidden bg-[#162238] py-28">
+    <section className="relative overflow-hidden bg-[#162238] py-15">
       {/* Background Effects */}
 
       <div className="absolute inset-0">
@@ -42,7 +42,7 @@ export default function ProjectHeroSection() {
 
           {/* Title */}
 
-          <h1 className="text-5xl font-bold leading-tight text-white lg:text-6xl">
+          <h1 className="text-[32px] font-bold leading-tight text-white">
 
             {pageBannerData.title.normal}
 
@@ -54,13 +54,13 @@ export default function ProjectHeroSection() {
 
           {/* Description */}
 
-          <p className="mt-8 max-w-2xl text-xl leading-9 text-slate-300">
+          <p className="mt-2 max-w-full text-[18px] leading-9 text-slate-300">
             {pageBannerData.description}
           </p>
 
           {/* Bottom Accent */}
 
-          <div className="mt-10 h-1 w-24 rounded-full bg-[#ef233c]" />
+          <div className="mt-4 h-1 w-24 rounded-full bg-[#ef233c]" />
 
         </div>
 
