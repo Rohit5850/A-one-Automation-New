@@ -72,7 +72,13 @@ export default function HeroSection() {
         {/* current lines + nodes */}
         <svg className={styles.electricSvg}>
           <defs>
-            <linearGradient id="electricPulse" x1="0%" y1="0%" x2="100%" y2="0%">
+            <linearGradient
+              id="electricPulse"
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="0%"
+            >
               <stop offset="0%" stopColor="rgba(59,130,246,0)" />
               <stop offset="20%" stopColor="rgba(59,130,246,0.3)" />
               <stop offset="40%" stopColor="rgba(59,130,246,0.8)" />
@@ -91,24 +97,116 @@ export default function HeroSection() {
             </filter>
           </defs>
 
-          <line className={styles.electricLine} x1="0%" y1="15%" x2="100%" y2="15%" />
-          <line className={styles.electricLine} x1="0%" y1="35%" x2="100%" y2="35%" style={{ animationDelay: "-1s" }} />
-          <line className={styles.electricLine} x1="0%" y1="55%" x2="100%" y2="55%" style={{ animationDelay: "-2s" }} />
-          <line className={styles.electricLine} x1="0%" y1="75%" x2="100%" y2="75%" style={{ animationDelay: "-3s" }} />
-          <line className={styles.electricLine} x1="0%" y1="85%" x2="100%" y2="85%" style={{ animationDelay: "-4s" }} />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="15%"
+            x2="100%"
+            y2="15%"
+          />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="35%"
+            x2="100%"
+            y2="35%"
+            style={{ animationDelay: "-1s" }}
+          />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="55%"
+            x2="100%"
+            y2="55%"
+            style={{ animationDelay: "-2s" }}
+          />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="75%"
+            x2="100%"
+            y2="75%"
+            style={{ animationDelay: "-3s" }}
+          />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="85%"
+            x2="100%"
+            y2="85%"
+            style={{ animationDelay: "-4s" }}
+          />
 
-          <line className={styles.electricLine} x1="0%" y1="20%" x2="100%" y2="80%" style={{ animationDelay: "-2s" }} />
-          <line className={styles.electricLine} x1="0%" y1="80%" x2="100%" y2="20%" style={{ animationDelay: "-4s" }} />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="20%"
+            x2="100%"
+            y2="80%"
+            style={{ animationDelay: "-2s" }}
+          />
+          <line
+            className={styles.electricLine}
+            x1="0%"
+            y1="80%"
+            x2="100%"
+            y2="20%"
+            style={{ animationDelay: "-4s" }}
+          />
 
-          <line className={styles.electricLine} x1="15%" y1="15%" x2="15%" y2="85%" />
-          <line className={styles.electricLine} x1="50%" y1="10%" x2="50%" y2="90%" style={{ animationDelay: "-1s" }} />
-          <line className={styles.electricLine} x1="85%" y1="15%" x2="85%" y2="85%" style={{ animationDelay: "-3s" }} />
+          <line
+            className={styles.electricLine}
+            x1="15%"
+            y1="15%"
+            x2="15%"
+            y2="85%"
+          />
+          <line
+            className={styles.electricLine}
+            x1="50%"
+            y1="10%"
+            x2="50%"
+            y2="90%"
+            style={{ animationDelay: "-1s" }}
+          />
+          <line
+            className={styles.electricLine}
+            x1="85%"
+            y1="15%"
+            x2="85%"
+            y2="85%"
+            style={{ animationDelay: "-3s" }}
+          />
 
           <circle className={styles.powerNode} cx="15%" cy="15%" r="4" />
-          <circle className={styles.powerNode} cx="85%" cy="35%" r="4" style={{ animationDelay: "0.4s" }} />
-          <circle className={styles.powerNode} cx="30%" cy="55%" r="4" style={{ animationDelay: "0.8s" }} />
-          <circle className={styles.powerNode} cx="70%" cy="75%" r="4" style={{ animationDelay: "1.2s" }} />
-          <circle className={styles.powerNode} cx="50%" cy="85%" r="4" style={{ animationDelay: "1.6s" }} />
+          <circle
+            className={styles.powerNode}
+            cx="85%"
+            cy="35%"
+            r="4"
+            style={{ animationDelay: "0.4s" }}
+          />
+          <circle
+            className={styles.powerNode}
+            cx="30%"
+            cy="55%"
+            r="4"
+            style={{ animationDelay: "0.8s" }}
+          />
+          <circle
+            className={styles.powerNode}
+            cx="70%"
+            cy="75%"
+            r="4"
+            style={{ animationDelay: "1.2s" }}
+          />
+          <circle
+            className={styles.powerNode}
+            cx="50%"
+            cy="85%"
+            r="4"
+            style={{ animationDelay: "1.6s" }}
+          />
         </svg>
 
         {/* floating particles */}
@@ -162,12 +260,16 @@ export default function HeroSection() {
             </h1>
 
             <p className="max-w-xl text-lg leading-relaxed text-slate-300">
-              A-One Automation Solutions specializes in PLC Programming, SCADA Development, HMI Design, VFD Commissioning, Control Panel Manufacturing, and Industrial Electrical Solutions. We help industries improve productivity, efficiency, and process reliability through advanced automation technologies.
+              A-One Automation Solutions specializes in PLC Programming, SCADA
+              Development, HMI Design, VFD Commissioning, Control Panel
+              Manufacturing, and Industrial Electrical Solutions. We help
+              industries improve productivity, efficiency, and process
+              reliability through advanced automation technologies.
             </p>
 
             <div className="flex flex-col gap-4 pt-4 sm:flex-row">
               <a
-                href="tel:+91-7489174850"
+                href="tel:+91-9201200589"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-xl"
               >
                 <Phone size={20} />
@@ -175,7 +277,7 @@ export default function HeroSection() {
               </a>
 
               <a
-                href="https://wa.me/917489174850"
+                href="https://wa.me/9201200589"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:bg-green-700 hover:shadow-xl"

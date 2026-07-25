@@ -77,7 +77,7 @@ const projects = [
 
 export default function RecentProjects() {
   return (
-    <section className="bg-slate-50 py-20 pt-0">
+    <section className="bg-slate-50 py-20 pt-10">
       <div className="mx-auto max-w-[1500px] px-4">
         {/* Heading */}
         <div className="mb-12 text-center">

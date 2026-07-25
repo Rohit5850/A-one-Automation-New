@@ -18,7 +18,7 @@ export const metadata = {
   },
 };
 
-export default function About() {
+export default function about() {
   return (
 
     <>

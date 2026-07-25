@@ -4,14 +4,14 @@ import ContactSection from "../Components/ContactSection";
 import FeaturesBar from "../Components/FeaturesBar";
 import MapSection from "../Components/MapSection";
 
-export default function Contact() {
+export default function contact() {
   return (
     <>
-     <ContactHero />
-     <ContactSection />
-     <MapSection />
-     <FeaturesBar />
-     <CallCta />  
+      <ContactHero />
+      <ContactSection />
+      <MapSection />
+      <FeaturesBar />
+      <CallCta />
     </>
   );
 }

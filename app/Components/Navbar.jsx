@@ -8,7 +8,7 @@ import { HiOutlineMenuAlt3, HiOutlineX } from "react-icons/hi";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
-import logo from '@/public/images/logo.png'
+import logo from "@/public/images/logo.png";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
@@ -16,80 +16,72 @@ export default function Navbar() {
   const pathname = usePathname();
 
   const menu = [
-  { label: "Home", href: "/" },
-  { label: "About", href: "/about" },
-  { label: "Services", href: "/services" },
-  { label: "Projects", href: "/projects" },
-  { label: "Certifications", href: "/certifications" },
-  { label: "Contact", href: "/Contact" },
-];
+    { label: "Home", href: "/" },
+    { label: "About", href: "/about" },
+    { label: "Services", href: "/services" },
+    { label: "Projects", href: "/projects" },
+    { label: "Certifications", href: "/certifications" },
+    { label: "Contact", href: "/contact" },
+  ];
 
-useEffect(() => {
-  const handleScroll = () => {
-    setIsSticky(window.scrollY > 38);
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsSticky(window.scrollY > 38);
+    };
 
-  window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll);
 
-  return () => window.removeEventListener("scroll", handleScroll);
-}, []);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-useEffect(() => {
-  if (open) {
-    document.body.style.overflow = "hidden";
-  } else {
-    document.body.style.overflow = "";
-  }
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
 
-  return () => {
-    document.body.style.overflow = "";
-  };
-}, [open]);
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   return (
     <header className="w-full mb-[82px] relative">
-
       {/* Top Bar */}
       <div className=" bg-secondary text-white">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-2">
-
           <div className="hidden gap-6 text-sm md:flex">
-
             <a
-              href="tel:+917489174850"
+              href="tel:+919201200589"
               className="flex items-center gap-2 hover:text-primary duration-300"
             >
               <FiPhoneCall size={15} />
-              +91-7489174850
+              +91-9201200589
             </a>
 
             <a
-              href="mailto:perfectelectrical.92@gmail.com"
+              href="mailto:sales@aone-india.com"
               className="flex items-center gap-2 hover:text-primary duration-300"
             >
               <FiMail size={15} />
-              aoneautomation.92@gmail.com
+              sales@aone-india.com
             </a>
-
           </div>
 
-          <p className="ml-auto text-xs">
-            GST : 23DTVPK2579B1ZG
-          </p>
-
+          <p className="ml-auto text-xs">GST : 23ANCPY6310J1ZY</p>
         </div>
       </div>
 
       {/* Main Navbar */}
 
-      <div className={`fixed top-0 left-0 right-0 z-[999] bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${  isSticky  ? "translate-y-0 shadow-xl"  : "translate-y-[38px] shadow-sm" }`} >
-
+      <div
+        className={`fixed top-0 left-0 right-0 z-[999] bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isSticky ? "translate-y-0 shadow-xl" : "translate-y-[38px] shadow-sm"}`}
+      >
         <div className="mx-auto flex h-20 max-w-[1500px] items-center justify-between px-5">
-
           {/* Logo */}
 
           <Link href="/" className="flex items-center gap-3">
-
             <Image
               src={logo}
               alt="Logo"
@@ -99,7 +91,6 @@ useEffect(() => {
             />
 
             <div>
-
               <h2 className="text-[24px] font-bold leading-none text-secondary">
                 Automation Solutions
               </h2>
@@ -107,15 +98,12 @@ useEffect(() => {
               {/* <p className="mt-1 text-sm text-gray-500">
                 Industrial Automation Experts
               </p> */}
-
             </div>
-
           </Link>
 
           {/* Desktop Menu */}
 
           <nav className="hidden items-center gap-3 lg:flex">
-
             {menu.map((item, index) => (
               <Link
                 key={index}
@@ -129,7 +117,6 @@ useEffect(() => {
                 {item.label}
               </Link>
             ))}
-
           </nav>
 
           {/* Button */}
@@ -148,41 +135,32 @@ useEffect(() => {
             onClick={() => setOpen(!open)}
             className="text-secondary lg:hidden"
           >
-            {open ? (
-              <HiOutlineX size={30} />
-            ) : (
-              <HiOutlineMenuAlt3 size={30} />
-            )}
+            {open ? <HiOutlineX size={30} /> : <HiOutlineMenuAlt3 size={30} />}
           </button>
-
         </div>
-
       </div>
 
       {/* Mobile Menu */}
 
       {open && (
-
-        <div className={`fixed top-[80px] left-0 right-0 z-[999] bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${  isSticky  ? "translate-y-0 shadow-xl"  : "translate-y-[38px] shadow-sm" }`}>
-
+        <div
+          className={`fixed top-[80px] left-0 right-0 z-[999] bg-white transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${isSticky ? "translate-y-0 shadow-xl" : "translate-y-[38px] shadow-sm"}`}
+        >
           <div className="space-y-2 p-5 flex flex-col">
-
             {menu.map((item) => (
-
               <Link
                 key={item.label}
                 href={item.href}
                 // className="block rounded-lg px-4 py-3 font-medium text-secondary hover:bg-primary hover:text-white"
-                 className={`rounded-xl px-3 py-1 text-[16px] font-medium transition-all duration-300 ${
+                className={`rounded-xl px-3 py-1 text-[16px] font-medium transition-all duration-300 ${
                   pathname === item.href
                     ? "text-primary "
                     : "text-secondary hover:text-primary"
                 }`}
-                 onClick={() => setOpen(false)}
+                onClick={() => setOpen(false)}
               >
                 {item.label}
               </Link>
-
             ))}
 
             <a
@@ -192,13 +170,9 @@ useEffect(() => {
               <HiOutlinePhone />
               Call Now
             </a>
-
           </div>
-
         </div>
-
       )}
-
     </header>
   );
 }
