@@ -10,7 +10,7 @@ export const metadata = {
     "PLC Programming, SCADA Development, HMI Design, Electrical Automation, Commissioning Services.",
 
   alternates: {
-    canonical: "/services",
+    canonical: "/projects",
   },
 };
 
