@@ -122,7 +122,7 @@ export default function Navbar() {
           {/* Button */}
 
           <a
-            href="tel:+917489174850"
+            href="tel:+919201200589"
             className="hidden items-center gap-2 rounded-xl bg-primary px-7 py-4 font-semibold text-white transition-all duration-300 hover:bg-secondary xl:flex"
           >
             <HiOutlinePhone size={20} />
