@@ -16,12 +16,11 @@ export const metadata = {
 
 export default function projects() {
   return (
-  <>
-  <ProjectHeroSection />
-  <ProjectsFilterSection />
-  <ProjectCTASection />
-  <CertificateCTASection />
-  </>
-  
+    <>
+      <ProjectHeroSection />
+      <ProjectsFilterSection />
+      <ProjectCTASection />
+      <CertificateCTASection />
+    </>
   );
 }
