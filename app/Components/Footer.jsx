@@ -61,8 +61,8 @@ export default function Footer() {
               <MapPin className="mt-1 text-primary" size={22} />
 
               <p className="text-gray-300 leading-8 text-[16px]">
-                Sanskar Valley, Sector No. 1, Pithampur, Dhar, Madhya Pradesh -
-                454775
+                New Kaka Complex, Sector No. 1, Pithampur, Dhar, Madhya Pradesh
+                - 454775
               </p>
             </div>
           </div>
