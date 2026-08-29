@@ -18,13 +18,13 @@ const aboutSectionData = {
   buttons: [
     {
       label: "Contact Us",
-      href: "/contact",
+      href: "/Contact",
       icon: "phone",
       variant: "primary"
     },
     {
       label: "Our Services",
-      href: "/services",
+      href: "/Services",
       icon: "arrow",
       variant: "outline"
     }

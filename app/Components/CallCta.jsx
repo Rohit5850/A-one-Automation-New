@@ -8,8 +8,8 @@ import { Phone } from "lucide-react";
 const CTA_DATA = {
   heading: "Need Immediate Assistance?",
   subheading: "Call us now for emergency support and quick solutions",
-  phoneDisplay: "+91-7489174850",
-  phoneHref: "tel:+917489174850",
+  phoneDisplay: "+91-9201200589",
+  phoneHref: "tel:+9201200589",
 };
 /* ------------------------------------------------------------------ */
 

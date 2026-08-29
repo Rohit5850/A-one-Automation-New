@@ -12,14 +12,14 @@ const ctaData = {
 
   buttons: [
     {
-      title: "Call: +91-7489174850",
-      href: "tel:+917489174850",
+      title: "Call: +91-9201200589",
+      href: "tel:9201200589",
       icon: "phone",
       variant: "light",
     },
     {
       title: "Send Inquiry",
-      href: "/contact",
+      href: "/Contact",
       icon: "arrow",
       variant: "outline",
     },

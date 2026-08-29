@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   Cpu,
   Settings,
@@ -8,8 +9,6 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
-
-
 
 export default function ServicesSection() {
   const services = [
@@ -70,9 +69,8 @@ export default function ServicesSection() {
   ];
 
   return (
-    <section className="bg-white py-24 pt-0">
+    <section className="bg-white py-24 pt-10">
       <div className="mx-auto max-w-[1500px] px-5">
-
         {/* Heading */}
 
         <div className="mb-16 text-center">
@@ -81,8 +79,8 @@ export default function ServicesSection() {
           </h2>
 
           <p className="mx-auto mt-4 max-w-3xl text-[18px] text-gray-600">
-            Comprehensive electrical and automation solutions for industrial
-            and commercial applications.
+            Comprehensive electrical and automation solutions for industrial and
+            commercial applications.
           </p>
         </div>
 
@@ -100,7 +98,6 @@ export default function ServicesSection() {
                 {/* Image */}
 
                 <div className="relative h-60 overflow-hidden">
-
                   <Image
                     src={service.image}
                     alt={service.title}
@@ -118,7 +115,6 @@ export default function ServicesSection() {
                 {/* Content */}
 
                 <div className="p-7">
-
                   <h3 className="text-[21px] font-bold text-secondary">
                     {service.title}
                   </h3>
@@ -137,7 +133,6 @@ export default function ServicesSection() {
                       </span>
                     ))}
                   </div>
-
                 </div>
               </div>
             );
@@ -147,12 +142,13 @@ export default function ServicesSection() {
         {/* Button */}
 
         <div className="mt-16 text-center">
-          <button className="inline-flex items-center gap-3 rounded-xl bg-primary px-8 py-4 font-semibold text-white transition hover:bg-secondary">
-            View All Services
-            <ArrowRight size={20} />
-          </button>
+          <Link href="/services">
+            <button className="inline-flex items-center gap-3 rounded-xl bg-primary px-8 py-4 font-semibold text-white transition hover:bg-secondary">
+              View All Services
+              <ArrowRight size={20} />
+            </button>
+          </Link>
         </div>
-
       </div>
     </section>
   );

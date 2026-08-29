@@ -13,7 +13,7 @@ const projectCTAData = {
 
   button: {
     text: "Start Your Project",
-    link: "/contact",
+    link: "/Contact",
   },
 };
 

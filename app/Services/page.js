@@ -14,14 +14,13 @@ export const metadata = {
   },
 };
 
-export default function ServicesPage() {
+export default function servicesPage() {
   return (
-  <>
-  <ServiceHeroSection />
-  <ServicesTabSection />
-  <ServicesWhatWeOfferSection />
-  <ServiceCTASection />
-  </>
-  
+    <>
+      <ServiceHeroSection />
+      <ServicesTabSection />
+      <ServicesWhatWeOfferSection />
+      <ServiceCTASection />
+    </>
   );
 }

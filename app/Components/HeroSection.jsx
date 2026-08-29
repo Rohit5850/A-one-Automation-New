@@ -185,7 +185,7 @@ export default function HeroSection() {
               </a>
 
               <a
-                href="/contact"
+                href="/Contact"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/10 px-8 py-4 font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
               >
                 Get Quote

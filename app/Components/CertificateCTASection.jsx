@@ -15,7 +15,7 @@ const trustCTAData = {
 
   button: {
     text: "Work With Certified Professionals",
-    link: "/contact",
+    link: "/certifications",
   },
 };
 

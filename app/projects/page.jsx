@@ -10,18 +10,17 @@ export const metadata = {
     "PLC Programming, SCADA Development, HMI Design, Electrical Automation, Commissioning Services.",
 
   alternates: {
-    canonical: "/services",
+    canonical: "/projects",
   },
 };
 
 export default function projects() {
   return (
-  <>
-  <ProjectHeroSection />
-  <ProjectsFilterSection />
-  <ProjectCTASection />
-  <CertificateCTASection />
-  </>
-  
+    <>
+      <ProjectHeroSection />
+      <ProjectsFilterSection />
+      <ProjectCTASection />
+      <CertificateCTASection />
+    </>
   );
 }

@@ -3,7 +3,6 @@ import CertificationHeroSection from "../Components/CertificationHeroSection";
 import CertificationSection from "../Components/CertificationSection";
 import SafetyQualitySection from "../Components/SafetyQualitySection";
 
-
 export const metadata = {
   title: "Industrial Automation Services",
 
@@ -11,18 +10,17 @@ export const metadata = {
     "PLC Programming, SCADA Development, HMI Design, Electrical Automation, Commissioning Services.",
 
   alternates: {
-    canonical: "/services",
+    canonical: "/certifications",
   },
 };
 
 export default function certifications() {
   return (
-  <>
-   <CertificationHeroSection />
-   <CertificationSection />
-   <SafetyQualitySection />
-   <CertificateCTASection />
-  </>
-  
+    <>
+      <CertificationHeroSection />
+      <CertificationSection />
+      <SafetyQualitySection />
+      <CertificateCTASection />
+    </>
   );
 }

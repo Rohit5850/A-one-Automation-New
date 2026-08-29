@@ -18,10 +18,10 @@ export default function Navbar() {
   const menu = [
   { label: "Home", href: "/" },
   { label: "About", href: "/about" },
-  { label: "Services", href: "/services" },
+  { label: "Services", href: "/Services" },
   { label: "Projects", href: "/projects" },
   { label: "Certifications", href: "/certifications" },
-  { label: "Contact", href: "/contact" },
+  { label: "Contact", href: "/Contact" },
 ];
 
 useEffect(() => {
@@ -135,7 +135,7 @@ useEffect(() => {
           {/* Button */}
 
           <a
-            href="tel:9201200589"
+            href="tel:+9201200589"
             className="hidden items-center gap-2 rounded-xl bg-primary px-7 py-4 font-semibold text-white transition-all duration-300 hover:bg-secondary xl:flex"
           >
             <HiOutlinePhone size={20} />
@@ -186,7 +186,7 @@ useEffect(() => {
             ))}
 
             <a
-              href="tel:9201200589"
+              href="tel:+9201200589"
               className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-primary py-4 font-semibold text-white"
             >
               <HiOutlinePhone />

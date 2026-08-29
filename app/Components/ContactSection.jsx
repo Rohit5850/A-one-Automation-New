@@ -87,8 +87,8 @@ const CONTACT_DATA = {
         "bg": "bg-red-50",
         "title": "Our Location",
         "lines": [
-          "Sanwer Bypass, Near Indore Dewas Toll,",
-          "Indore, Madhya Pradesh - 453775"
+          "New Kaka Complex, Azad Chouraha Near IDBI Bank ",
+          "Pithampur, Madhya Pradesh - 454775"
         ],
         "link": null
       },
@@ -98,8 +98,8 @@ const CONTACT_DATA = {
         "iconColor": "text-red-500",
         "bg": "bg-red-50",
         "title": "Phone Number",
-        "lines": ["+91-7489174850"],
-        "link": "tel:+917489174850"
+        "lines": ["+91-9201200589"],
+        "link": "tel:9201200589"
       },
       {
         "id": "whatsapp",
@@ -107,8 +107,8 @@ const CONTACT_DATA = {
         "iconColor": "text-green-500",
         "bg": "bg-green-50",
         "title": "WhatsApp",
-        "lines": ["+91-7489174850"],
-        "link": "https://wa.me/917489174850"
+        "lines": ["+91-9201200589"],
+        "link": "https://wa.me/9201200589"
       },
       {
         "id": "email",
@@ -116,8 +116,8 @@ const CONTACT_DATA = {
         "iconColor": "text-red-500",
         "bg": "bg-red-50",
         "title": "Email Address",
-        "lines": ["aoneautomation125@gmail.com"],
-        "link": "mailto:aoneautomation125@gmail.com"
+        "lines": ["sales@aone-india.com"],
+        "link": "mailto:sales@aone-india.com"
       },
       {
         "id": "hours",

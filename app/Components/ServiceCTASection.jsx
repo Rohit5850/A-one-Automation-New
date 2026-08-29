@@ -13,7 +13,7 @@ const ctaData = {
 
   button: {
     text: "Get Free Consultation",
-    link: "/contact",
+    link: "/Contact",
   },
 };
 
