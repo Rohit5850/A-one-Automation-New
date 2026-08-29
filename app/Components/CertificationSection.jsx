@@ -213,11 +213,19 @@ export default function CertificationSection() {
 
           <div className="bg-slate-100 p-8">
 
-            <img
-              src={selectedCertificate.image}
-              alt={selectedCertificate.title}
-              className="mx-auto max-h-[75vh] w-auto rounded-xl shadow-xl"
-            />
+            {selectedCertificate.image.toLowerCase().endsWith(".pdf") ? (
+  <iframe
+    src={selectedCertificate.image}
+    title={selectedCertificate.title}
+    className="mx-auto h-[75vh] w-full rounded-xl shadow-xl"
+  />
+) : (
+  <img
+    src={selectedCertificate.image}
+    alt={selectedCertificate.title}
+    className="mx-auto max-h-[75vh] w-auto rounded-xl shadow-xl"
+  />
+)}
 
           </div>
 
