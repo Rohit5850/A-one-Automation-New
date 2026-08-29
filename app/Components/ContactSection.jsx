@@ -108,7 +108,7 @@ const CONTACT_DATA = {
         "bg": "bg-green-50",
         "title": "WhatsApp",
         "lines": ["+91-9201200589"],
-        "link": "https://wa.me/9201200589"
+        "link": "https://wa.me/919201200589"
       },
       {
         "id": "email",
