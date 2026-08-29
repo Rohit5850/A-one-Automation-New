@@ -23,7 +23,7 @@ const certificationData = {
 
       icon: FileBadge,
 
-      image: "/images/certificates/gst.pdf",
+      image: "/images/gst.pdf",
     },
 
     {
@@ -36,7 +36,7 @@ const certificationData = {
 
       icon: BadgeCheck,
 
-      image: "/images/certificates/iso.pdf",
+      image: "/images/iso.pdf",
     },
   ],
 };
@@ -213,12 +213,15 @@ export default function CertificationSection() {
 
           <div className="bg-slate-100 p-8">
 
-            {selectedCertificate.image.toLowerCase().endsWith(".pdf") ? (
-  <iframe
-    src={selectedCertificate.image}
-    title={selectedCertificate.title}
-    className="mx-auto h-[75vh] w-full rounded-xl shadow-xl"
-  />
+           
+{selectedCertificate.image.toLowerCase().endsWith(".pdf") ? (
+  <div className="flex w-full justify-center">
+    <iframe
+      src={`${selectedCertificate.image}#toolbar=0&navpanes=0&scrollbar=0`}
+      title={selectedCertificate.title}
+      className="h-[75vh] w-full max-w-4xl rounded-xl border-0 shadow-xl"
+    />
+  </div>
 ) : (
   <img
     src={selectedCertificate.image}
@@ -226,6 +229,8 @@ export default function CertificationSection() {
     className="mx-auto max-h-[75vh] w-auto rounded-xl shadow-xl"
   />
 )}
+
+
 
           </div>
 
