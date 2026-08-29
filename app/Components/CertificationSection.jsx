@@ -17,26 +17,26 @@ const certificationData = {
     {
       id: 1,
       title: "GST Registration",
-      number: "23DTVPK2579B1ZG",
+      number: "23ANCPY6310J1ZY",
       description:
-        "Government registered electrical solutions provider.",
+        "Government registered Automation solutions provider.",
 
       icon: FileBadge,
 
-      image: "/images/certificates/gst.jpg",
+      image: "/images/certificates/gst.pdf",
     },
 
     {
       id: 2,
-      title: "MSME Registration",
-      number: "UDYAM-MP-01-XXXXXXXX",
+      title: "Quality Certificates",
+      number: "ISO 9001:2015",
 
       description:
-        "Registered Micro, Small & Medium Enterprise.",
+        "Quality Management System",
 
       icon: BadgeCheck,
 
-      image: "/images/certificates/msme.jpg",
+      image: "/images/certificates/iso.pdf",
     },
   ],
 };
