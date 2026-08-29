@@ -175,7 +175,7 @@ export default function HeroSection() {
               </a>
 
               <a
-                href="https://wa.me/9201200589"
+                href="https://wa.me/919201200589"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:bg-green-700 hover:shadow-xl"
