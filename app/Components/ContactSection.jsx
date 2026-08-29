@@ -24,10 +24,11 @@ const CONTACT_DATA = {
     "submitLabel": "Send Message",
     "services": [
       "General Inquiry",
-      "Home Automation",
-      "Office Automation",
-      "Security Systems",
+      "Automation Services",
+      "Control Pannel",
+      "Annual Maintenance Services",
       "Maintenance & Support",
+      "All Electrical Solutions",
       "Other"
     ],
     "rows": [
