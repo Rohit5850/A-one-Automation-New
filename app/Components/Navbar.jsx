@@ -21,7 +21,7 @@ export default function Navbar() {
   { label: "Services", href: "/services" },
   { label: "Projects", href: "/projects" },
   { label: "Certifications", href: "/certifications" },
-  { label: "Contact", href: "/Contact" },
+  { label: "Contact", href: "/contact" },
 ];
 
 useEffect(() => {
@@ -56,25 +56,25 @@ useEffect(() => {
           <div className="hidden gap-6 text-sm md:flex">
 
             <a
-              href="tel:+917489174850"
+              href="tel:9201200589"
               className="flex items-center gap-2 hover:text-primary duration-300"
             >
               <FiPhoneCall size={15} />
-              +91-7489174850
+              +91-9201200589
             </a>
 
             <a
-              href="mailto:perfectelectrical.92@gmail.com"
+              href="mailto:sales@aone-india.com"
               className="flex items-center gap-2 hover:text-primary duration-300"
             >
               <FiMail size={15} />
-              aoneautomation.92@gmail.com
+              sales@aone-india.com
             </a>
 
           </div>
 
           <p className="ml-auto text-xs">
-            GST : 23DTVPK2579B1ZG
+            GST : 23ANCPY6310J1ZY
           </p>
 
         </div>
@@ -135,7 +135,7 @@ useEffect(() => {
           {/* Button */}
 
           <a
-            href="tel:+917489174850"
+            href="tel:9201200589"
             className="hidden items-center gap-2 rounded-xl bg-primary px-7 py-4 font-semibold text-white transition-all duration-300 hover:bg-secondary xl:flex"
           >
             <HiOutlinePhone size={20} />
@@ -186,7 +186,7 @@ useEffect(() => {
             ))}
 
             <a
-              href="tel:+917489174850"
+              href="tel:9201200589"
               className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-primary py-4 font-semibold text-white"
             >
               <HiOutlinePhone />

@@ -167,7 +167,7 @@ export default function HeroSection() {
 
             <div className="flex flex-col gap-4 pt-4 sm:flex-row">
               <a
-                href="tel:+91-7489174850"
+                href="tel:9201200589"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:from-blue-700 hover:to-blue-800 hover:shadow-xl"
               >
                 <Phone size={20} />
@@ -175,7 +175,7 @@ export default function HeroSection() {
               </a>
 
               <a
-                href="https://wa.me/917489174850"
+                href="https://wa.me/9201200589"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-green-600 px-8 py-4 font-semibold text-white shadow-lg transition-all hover:bg-green-700 hover:shadow-xl"

@@ -25,7 +25,7 @@ export default function ContactHero() {
         {/* Content */}
         <div className="absolute inset-0 flex items-center">
 
-          <div className="w-full max-w-[1500px] mx-auto px-5 sm:px-8 lg:px-0">
+          <div className="w-full max-w-[1500px] mx-auto px-5 sm:px-6 lg:px-8">
 
             <div className="max-w-full">
 
