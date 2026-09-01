@@ -2,56 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { signOut } from "next-auth/react";
-import EmployeeCard from "@/components/EmployeeCard";
+import EmployeeCard from "@/app/Components/EmployeeCard";
 
+const CURRENT_YEAR = new Date().getFullYear();
+// Shows the current year plus the previous 4 -> 5 years of selectable history
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - i);
+
+function formatDuration(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return "-";
+  const ms = new Date(checkOut) - new Date(checkIn);
+  if (ms <= 0) return "-";
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  return `${hours}h ${minutes}m`;
+}
+
+// Read-only: attendance is now marked by HR from /hr/attendance.
+// Employee can only view their own profile and history here.
 export default function EmployeeDashboard() {
   const [employee, setEmployee] = useState(null);
   const [records, setRecords] = useState([]);
-  const [marking, setMarking] = useState(false);
-  const [message, setMessage] = useState("");
-
-  async function loadData() {
-    const meRes = await fetch("/api/me");
-    const meData = await meRes.json();
-    setEmployee(meData.employee);
-
-    const attRes = await fetch("/api/attendance");
-    const attData = await attRes.json();
-    setRecords(attData.records || []);
-  }
+  const [year, setYear] = useState(CURRENT_YEAR);
 
   useEffect(() => {
-    loadData();
+    fetch("/api/me")
+      .then((res) => res.json())
+      .then((data) => setEmployee(data.employee));
   }, []);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayRecord = records.find((r) => r.date === today);
-
-  async function handleCheckIn() {
-    setMarking(true);
-    setMessage("");
-    const res = await fetch("/api/attendance", { method: "POST" });
-    setMarking(false);
-    if (res.ok) {
-      setMessage("Check-in ho gaya!");
-      loadData();
-    } else {
-      setMessage("Kuch galat ho gaya.");
-    }
-  }
-
-  async function handleCheckOut() {
-    setMarking(true);
-    setMessage("");
-    const res = await fetch("/api/attendance", { method: "PATCH" });
-    setMarking(false);
-    if (res.ok) {
-      setMessage("Check-out ho gaya!");
-      loadData();
-    } else {
-      setMessage("Kuch galat ho gaya.");
-    }
-  }
+  useEffect(() => {
+    fetch(`/api/attendance?year=${year}`)
+      .then((res) => res.json())
+      .then((data) => setRecords(data.records || []));
+  }, [year]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -68,41 +51,39 @@ export default function EmployeeDashboard() {
       <main className="max-w-2xl mx-auto p-6 space-y-6">
         <EmployeeCard employee={employee} />
 
-        <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
-          <p className="text-sm text-slate-600">Aaj: {today}</p>
-          {message && <p className="text-sm text-emerald-600">{message}</p>}
-          <div className="flex gap-3">
-            <button
-              onClick={handleCheckIn}
-              disabled={marking || !!todayRecord?.checkIn}
-              className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-50"
-            >
-              {todayRecord?.checkIn ? "Checked In" : "Check In"}
-            </button>
-            <button
-              onClick={handleCheckOut}
-              disabled={marking || !todayRecord?.checkIn || !!todayRecord?.checkOut}
-              className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50 disabled:opacity-50"
-            >
-              {todayRecord?.checkOut ? "Checked Out" : "Check Out"}
-            </button>
-          </div>
-        </div>
-
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-200 font-medium text-slate-800 text-sm">
-            My Attendance History
+          <div className="px-5 py-3 border-b border-slate-200 font-medium text-slate-800 text-sm flex items-center justify-between">
+            <span>My Attendance History</span>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="text-sm border border-slate-300 rounded-md px-2 py-1"
+            >
+              {YEAR_OPTIONS.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
           </div>
           <table className="w-full text-sm">
             <thead className="bg-slate-100 text-slate-600 text-left">
               <tr>
                 <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2">Check In</th>
-                <th className="px-4 py-2">Check Out</th>
+                <th className="px-4 py-2">Check-in Time</th>
+                <th className="px-4 py-2">Check-out Time</th>
+                <th className="px-4 py-2">Total Time</th>
                 <th className="px-4 py-2">Status</th>
               </tr>
             </thead>
             <tbody>
+              {records.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                    {year} ke liye koi record nahi mila.
+                  </td>
+                </tr>
+              )}
               {records.map((r) => (
                 <tr key={r._id} className="border-t border-slate-100">
                   <td className="px-4 py-2">{r.date}</td>
@@ -112,6 +93,7 @@ export default function EmployeeDashboard() {
                   <td className="px-4 py-2">
                     {r.checkOut ? new Date(r.checkOut).toLocaleTimeString() : "-"}
                   </td>
+                  <td className="px-4 py-2">{formatDuration(r.checkIn, r.checkOut)}</td>
                   <td className="px-4 py-2 capitalize">{r.status}</td>
                 </tr>
               ))}

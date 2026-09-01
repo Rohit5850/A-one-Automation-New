@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
-import { authOptions } from "@/lib/authOptions";
-import dbConnect from "@/lib/dbConnect";
-import Employee from "@/models/Employee";
-import User from "@/models/User";
+import { authOptions } from "@/app/lib/authOptions";
+import dbConnect from "@/app/lib/dbConnect";
+import Employee from "@/app/models/Employee";
+import User from "@/app/models/User";
 
-// GET /api/employees -> HR only: list all employee cards
+// GET /api/employees -> HR only: list all employee cards, or ?employeeId=EMP-0001 to find one
 export async function GET(req) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "hr") {
@@ -14,6 +14,14 @@ export async function GET(req) {
   }
 
   await dbConnect();
+  const { searchParams } = new URL(req.url);
+  const employeeId = searchParams.get("employeeId");
+
+  if (employeeId) {
+    const employee = await Employee.findOne({ employeeId: employeeId.trim() });
+    return NextResponse.json({ employees: employee ? [employee] : [] });
+  }
+
   const employees = await Employee.find().sort({ createdAt: -1 });
   return NextResponse.json({ employees });
 }

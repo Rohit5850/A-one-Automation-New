@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
-import dbConnect from "@/lib/dbConnect";
-import Employee from "@/models/Employee";
+import { authOptions } from "@/app/lib/authOptions";
+import dbConnect from "@/app/lib/dbConnect";
+import Employee from "@/app/models/Employee";
 
 // GET /api/me -> employee's own details only.
 // The employeeId comes from the SERVER-SIDE session token, never from client input,
