@@ -10,6 +10,7 @@ const FIELDS = [
   ["phone", "Phone", "text"],
   ["designation", "Designation", "text"],
   ["department", "Department", "text"],
+  ["dateOfJoining", "Date of Joining", "date"],
   ["bloodGroup", "Blood Group", "text"],
   ["emergencyContact", "Emergency Contact", "text"],
 ];
@@ -118,12 +119,38 @@ export default function EditEmployeePage({ params }) {
             <label className="text-sm font-medium text-slate-700">{label}</label>
             <input
               type={type}
-              value={form[name] || ""}
+              value={type === "date" ? (form[name] || "").slice(0, 10) : form[name] || ""}
               onChange={(e) => update(name, e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             />
           </div>
         ))}
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">Gender</label>
+          <select
+            value={form.gender || ""}
+            onChange={(e) => update("gender", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="">Select</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">
+            Date of Leaving (agar employee company chhod chuka ho)
+          </label>
+          <input
+            type="date"
+            value={(form.dateOfLeaving || "").slice(0, 10)}
+            onChange={(e) => update("dateOfLeaving", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          />
+        </div>
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-slate-700">Address</label>

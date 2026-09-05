@@ -14,6 +14,8 @@ const EmployeeSchema = new mongoose.Schema(
     designation: { type: String, trim: true },
     department: { type: String, trim: true },
     dateOfJoining: { type: Date },
+    dateOfLeaving: { type: Date, default: null }, // set when employee exits the company
+    gender: { type: String, enum: ["male", "female", "other"], trim: true },
     address: { type: String, trim: true },
     photoUrl: { type: String, trim: true }, // optional, for the employee card
     bloodGroup: { type: String, trim: true },

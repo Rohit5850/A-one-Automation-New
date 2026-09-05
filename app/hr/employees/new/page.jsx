@@ -8,6 +8,7 @@ const initial = {
   fullName: "",
   email: "",
   phone: "",
+  gender: "",
   designation: "",
   department: "",
   dateOfJoining: "",
@@ -88,6 +89,20 @@ export default function NewEmployeePage() {
             />
           </div>
         ))}
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">Gender</label>
+          <select
+            value={form.gender}
+            onChange={(e) => update("gender", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="">Select</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-slate-700">Address</label>

@@ -50,6 +50,12 @@ export default function HRDashboard() {
         <h1 className="font-semibold text-slate-900">HR Dashboard</h1>
         <div className="flex gap-3">
           <Link
+            href="/hr/users"
+            className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+          >
+            Users
+          </Link>
+          <Link
             href="/hr/attendance"
             className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
           >
