@@ -162,6 +162,30 @@ export default function EditEmployeePage({ params }) {
           />
         </div>
 
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">Wage Type</label>
+          <select
+            value={form.wageType || "monthly"}
+            onChange={(e) => update("wageType", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="monthly">Monthly Salary</option>
+            <option value="daily">Daily Wage</option>
+          </select>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">
+            {form.wageType === "daily" ? "Per-day Rate (₹)" : "Monthly Salary (₹)"}
+          </label>
+          <input
+            type="number"
+            value={form.salary ?? ""}
+            onChange={(e) => update("salary", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          />
+        </div>
+
         <button
           type="submit"
           disabled={saving}

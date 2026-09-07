@@ -16,6 +16,12 @@ const EmployeeSchema = new mongoose.Schema(
     dateOfJoining: { type: Date },
     dateOfLeaving: { type: Date, default: null }, // set when employee exits the company
     gender: { type: String, enum: ["male", "female", "other"], trim: true },
+    wageType: {
+      type: String,
+      enum: ["daily", "monthly"],
+      required: true,
+      default: "monthly",
+    }, // decides how salary is calculated from attendance
     address: { type: String, trim: true },
     photoUrl: { type: String, trim: true }, // optional, for the employee card
     bloodGroup: { type: String, trim: true },

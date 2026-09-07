@@ -48,7 +48,19 @@ export default function HRDashboard() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
         <h1 className="font-semibold text-slate-900">HR Dashboard</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          <Link
+            href="/hr/salaries"
+            className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+          >
+            Salaries
+          </Link>
+          <Link
+            href="/hr/holidays"
+            className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+          >
+            Holidays
+          </Link>
           <Link
             href="/hr/users"
             className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"

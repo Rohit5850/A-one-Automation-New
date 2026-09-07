@@ -44,6 +44,8 @@ export async function POST(req) {
     department,
     dateOfJoining,
     dateOfLeaving,
+    wageType, // "daily" | "monthly" - required, decides how salary auto-calculates from attendance
+    salary, // monthly amount if wageType=monthly, per-day rate if wageType=daily
     address,
     photoUrl,
     bloodGroup,
@@ -54,6 +56,12 @@ export async function POST(req) {
   if (!employeeId || !fullName || !email || !password) {
     return NextResponse.json(
       { error: "employeeId, fullName, email and password are required" },
+      { status: 400 }
+    );
+  }
+  if (!wageType || !["daily", "monthly"].includes(wageType)) {
+    return NextResponse.json(
+      { error: "Wage type (daily/monthly) is required" },
       { status: 400 }
     );
   }
@@ -76,6 +84,8 @@ export async function POST(req) {
       department,
       dateOfJoining,
       dateOfLeaving: dateOfLeaving || null,
+      wageType,
+      salary: salary ? Number(salary) : undefined,
       address,
       photoUrl,
       bloodGroup,

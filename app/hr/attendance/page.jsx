@@ -34,6 +34,13 @@ export default function HRAttendancePage() {
   const [manualSaving, setManualSaving] = useState(false);
   const [manualMessage, setManualMessage] = useState("");
 
+  // Leave / half-day / absent marking state
+  const [leaveDate, setLeaveDate] = useState(new Date().toISOString().slice(0, 10));
+  const [leaveStatus, setLeaveStatus] = useState("leave");
+  const [leaveReason, setLeaveReason] = useState("");
+  const [leaveSaving, setLeaveSaving] = useState(false);
+  const [leaveMessage, setLeaveMessage] = useState("");
+
   useEffect(() => {
     fetch("/api/employees")
       .then((res) => res.json())
@@ -61,6 +68,10 @@ export default function HRAttendancePage() {
     setManualCheckIn("");
     setManualCheckOut("");
     setManualMessage("");
+    setLeaveDate(new Date().toISOString().slice(0, 10));
+    setLeaveStatus("leave");
+    setLeaveReason("");
+    setLeaveMessage("");
     loadHistory(emp._id);
   }
 
@@ -157,6 +168,31 @@ export default function HRAttendancePage() {
       setMessage("Reset nahi ho paya, dubara try karein.");
     }
     loadHistory(employee._id);
+  }
+
+  async function handleLeaveSave() {
+    if (!employee) return;
+    setLeaveSaving(true);
+    setLeaveMessage("");
+    const res = await fetch("/api/attendance/manual", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeId: employee._id,
+        date: leaveDate,
+        status: leaveStatus,
+        reason: leaveReason,
+      }),
+    });
+    setLeaveSaving(false);
+    if (res.ok) {
+      setLeaveMessage(`${leaveDate} ko "${leaveStatus}" mark ho gaya.`);
+      setLeaveReason("");
+      loadHistory(employee._id);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setLeaveMessage(data.error || "Save nahi ho paya.");
+    }
   }
 
   return (
@@ -317,6 +353,65 @@ export default function HRAttendancePage() {
                   </button>
                 </div>
               </div>
+
+              <div className="pt-4 mt-2 border-t border-slate-100 space-y-3">
+                <p className="text-sm font-medium text-slate-700">
+                  Mark Leave / Half-day / Absent
+                </p>
+                <p className="text-xs text-slate-400">
+                  Holiday aur Sunday (week-off) automatically lagte hain -{" "}
+                  <Link href="/hr/holidays" className="underline">
+                    Holiday Calendar yaha set karein
+                  </Link>
+                  . Ye section sirf kisi ek employee ki individual leave/absent/half-day mark
+                  karne ke liye hai.
+                </p>
+                {leaveMessage && <p className="text-sm text-emerald-600">{leaveMessage}</p>}
+                <div className="flex gap-3 flex-wrap items-end">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Date</label>
+                    <input
+                      type="date"
+                      value={leaveDate}
+                      onChange={(e) => setLeaveDate(e.target.value)}
+                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-500">Status</label>
+                    <select
+                      value={leaveStatus}
+                      onChange={(e) => setLeaveStatus(e.target.value)}
+                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                    >
+                      <option value="leave">Leave</option>
+                      <option value="half-day">Half Day</option>
+                      <option value="absent">Absent</option>
+                      <option value="present">Present (revert to normal)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1 flex-1 min-w-[180px]">
+                    <label className="text-xs text-slate-500">Reason</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Sick leave, Personal work..."
+                      value={leaveReason}
+                      onChange={(e) => setLeaveReason(e.target.value)}
+                      className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleLeaveSave}
+                    disabled={leaveSaving}
+                    className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {leaveSaving ? "Saving..." : "Save Status"}
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
@@ -331,12 +426,13 @@ export default function HRAttendancePage() {
                     <th className="px-4 py-2">Check-out Time</th>
                     <th className="px-4 py-2">Total Time</th>
                     <th className="px-4 py-2">Status</th>
+                    <th className="px-4 py-2">Reason</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                      <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                         Koi record nahi mila.
                       </td>
                     </tr>
@@ -352,6 +448,7 @@ export default function HRAttendancePage() {
                       </td>
                       <td className="px-4 py-2">{formatDuration(r.checkIn, r.checkOut)}</td>
                       <td className="px-4 py-2 capitalize">{r.status}</td>
+                      <td className="px-4 py-2 text-slate-500">{r.reason || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

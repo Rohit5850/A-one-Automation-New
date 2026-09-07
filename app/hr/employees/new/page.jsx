@@ -12,6 +12,8 @@ const initial = {
   designation: "",
   department: "",
   dateOfJoining: "",
+  wageType: "monthly",
+  salary: "",
   address: "",
   bloodGroup: "",
   emergencyContact: "",
@@ -89,6 +91,36 @@ export default function NewEmployeePage() {
             />
           </div>
         ))}
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">
+            Wage Type <span className="text-red-500">*</span>
+          </label>
+          <select
+            required
+            value={form.wageType}
+            onChange={(e) => update("wageType", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          >
+            <option value="monthly">Monthly Salary</option>
+            <option value="daily">Daily Wage</option>
+          </select>
+          <p className="text-xs text-slate-400">
+            Ye decide karta hai attendance se salary kaise calculate hogi.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-slate-700">
+            {form.wageType === "daily" ? "Per-day Rate (₹)" : "Monthly Salary (₹)"}
+          </label>
+          <input
+            type="number"
+            value={form.salary}
+            onChange={(e) => update("salary", e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+          />
+        </div>
 
         <div className="space-y-1">
           <label className="text-sm font-medium text-slate-700">Gender</label>

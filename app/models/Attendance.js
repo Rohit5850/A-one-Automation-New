@@ -15,9 +15,10 @@ const AttendanceSchema = new mongoose.Schema(
     checkOut: { type: Date },
     status: {
       type: String,
-      enum: ["present", "half-day", "on-leave", "absent"],
+      enum: ["present", "half-day", "leave", "absent", "holiday", "week-off"],
       default: "present",
     },
+    reason: { type: String, trim: true }, // why on leave/half-day, or holiday name
     note: { type: String, trim: true },
   },
   { timestamps: true }
