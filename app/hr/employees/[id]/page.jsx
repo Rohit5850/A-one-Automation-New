@@ -120,7 +120,7 @@ export default function EmployeeDetailPage({ params }) {
   const loanOutstanding = activeLoans.reduce((sum, l) => sum + loanOutstandingAsOf(l, month), 0);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div>
       <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -257,9 +257,22 @@ export default function EmployeeDetailPage({ params }) {
 }
 
 // ---------- ATTENDANCE TAB ----------
+function effectiveHours(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return null;
+  const ms = new Date(checkOut) - new Date(checkIn);
+  if (ms <= 0) return null;
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  return `${hours}h ${minutes}m`;
+}
+
+function weekdayShort(dateStr) {
+  return new Date(dateStr).toLocaleDateString("en-US", { weekday: "short" });
+}
+
 function AttendanceTab({ payrollData, loading }) {
   if (loading) return <p className="text-sm text-slate-500">Loading...</p>;
-  const days = payrollData?.days || [];
+  const days = [...(payrollData?.days || [])].sort((a, b) => (a.date < b.date ? 1 : -1));
   const summary = payrollData?.payroll?.attendanceSummary || {};
 
   const stats = [
@@ -283,47 +296,84 @@ function AttendanceTab({ payrollData, loading }) {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600 text-left">
-            <tr>
-              <th className="px-4 py-2">Date</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Reason</th>
-              <th className="px-4 py-2">Check In</th>
-              <th className="px-4 py-2">Check Out</th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
-                  Is month ke liye koi data nahi hai.
-                </td>
-              </tr>
-            )}
-            {days.map((d) => (
-              <tr key={d.date} className="border-t border-slate-100">
-                <td className="px-4 py-2">{d.date}</td>
-                <td className="px-4 py-2">
-                  <span className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[d.status]}`}>
-                    {STATUS_LABELS[d.status] || d.status}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-slate-500">{d.reason || "-"}</td>
-                <td className="px-4 py-2">
-                  {d.checkIn ? new Date(d.checkIn).toLocaleTimeString() : "-"}
-                </td>
-                <td className="px-4 py-2">
-                  {d.checkOut ? new Date(d.checkOut).toLocaleTimeString() : "-"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="grid grid-cols-[110px_1fr_100px_100px_90px] px-4 py-2 bg-slate-100 text-slate-500 text-xs font-medium uppercase tracking-wide">
+          <span>Date</span>
+          <span>Attendance</span>
+          <span>Effective Hrs</span>
+          <span>Check In</span>
+          <span>Check Out</span>
+        </div>
+
+        {days.length === 0 && (
+          <p className="px-4 py-8 text-center text-slate-400 text-sm">
+            Is month ke liye koi data nahi hai.
+          </p>
+        )}
+
+        {days.map((d) => {
+          const isOff = d.status === "week-off" || d.status === "holiday";
+          const eff = effectiveHours(d.checkIn, d.checkOut);
+
+          if (isOff) {
+            return (
+              <div
+                key={d.date}
+                className="grid grid-cols-[110px_1fr] px-4 py-3 border-t border-slate-100 bg-slate-50/70 items-center"
+              >
+                <span className="text-sm text-slate-700">
+                  {weekdayShort(d.date)}, {d.date.slice(8, 10)} {monthShort(d.date)}
+                </span>
+                <span className="text-xs font-medium text-slate-500 bg-slate-200 rounded px-2 py-0.5 w-fit">
+                  {d.status === "holiday" ? `Holiday${d.reason ? ` - ${d.reason}` : ""}` : "Full day Weekly-off"}
+                </span>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              key={d.date}
+              className="grid grid-cols-[110px_1fr_100px_100px_90px] px-4 py-3 border-t border-slate-100 items-center"
+            >
+              <span className="text-sm text-slate-700">
+                {weekdayShort(d.date)}, {d.date.slice(8, 10)} {monthShort(d.date)}
+              </span>
+              <div className="pr-4">
+                <div className="h-2 rounded-full bg-slate-100 overflow-hidden w-full max-w-[240px]">
+                  {d.checkIn && (
+                    <div
+                      className={`h-full rounded-full ${STATUS_BAR_COLOR[d.status] || "bg-emerald-400"}`}
+                      style={{ width: eff ? "70%" : "25%" }}
+                    />
+                  )}
+                </div>
+                {d.reason && <p className="text-xs text-slate-400 mt-1">{d.reason}</p>}
+              </div>
+              <span className="text-sm text-slate-700">{eff || "-"}</span>
+              <span className="text-sm text-slate-700">
+                {d.checkIn ? new Date(d.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+              </span>
+              <span className="text-sm text-slate-700">
+                {d.checkOut ? new Date(d.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
+
+function monthShort(dateStr) {
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short" });
+}
+
+const STATUS_BAR_COLOR = {
+  present: "bg-emerald-400",
+  "half-day": "bg-amber-400",
+  leave: "bg-blue-400",
+  absent: "bg-red-300",
+};
 
 // ---------- PAYROLL TAB ----------
 function PayrollTab({ payrollData, loading, loanOutstanding, month }) {
@@ -451,7 +501,7 @@ function DetailsTab({ employee, payroll, month }) {
     setSending(true);
     setMessage("");
     try {
-      const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
+      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
       await generateSalarySlipPdf(employee, payroll, month);
     } catch (err) {
       console.error(err);
