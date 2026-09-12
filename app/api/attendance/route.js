@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import Attendance from "@/app/models/Attendance";
+import Employee from "@/app/models/Employee";
+import { reverseGeocodeLocation } from "@/app/lib/reverseGeocode";
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
@@ -76,10 +78,38 @@ export async function POST(req) {
       return NextResponse.json({ error: "Already checked in today" }, { status: 400 });
     }
 
+    const rawLocation =
+      body.location && typeof body.location.lat === "number" && typeof body.location.lng === "number"
+        ? {
+            lat: body.location.lat,
+            lng: body.location.lng,
+            accuracy: typeof body.location.accuracy === "number" ? body.location.accuracy : undefined,
+          }
+        : undefined;
+
+    // Always read the CURRENT employee setting. If HR turns Field/Site Worker ON later,
+    // GPS becomes mandatory from the very next employee check-in/check-out. Turning it OFF
+    // restores the old normal flow immediately. HR manual attendance is not affected.
+    if (session.user.role === "employee") {
+      const employee = await Employee.findById(targetEmployeeId).select("fieldWorker status");
+      if (!employee || employee.status !== "active") {
+        return NextResponse.json({ error: "Employee account is inactive" }, { status: 403 });
+      }
+      if (employee.fieldWorker && !rawLocation) {
+        return NextResponse.json(
+          { error: "Field/Site Worker ke liye GPS location required hai. Location permission allow karke dubara try karein." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const location = rawLocation ? await reverseGeocodeLocation(rawLocation) : undefined;
+
     if (record) {
       // Record exists (e.g. after a reset) but has no check-in yet - set it explicitly.
       record.checkIn = new Date();
       record.status = body.status || record.status || "present";
+      if (location) record.checkInLocation = location;
       await record.save();
     } else {
       record = await Attendance.create({
@@ -87,6 +117,7 @@ export async function POST(req) {
         date,
         checkIn: new Date(),
         status: body.status || "present",
+        checkInLocation: location,
       });
     }
 
@@ -119,13 +150,40 @@ export async function PATCH(req) {
 
     await dbConnect();
 
+    const rawLocation =
+      body.location && typeof body.location.lat === "number" && typeof body.location.lng === "number"
+        ? {
+            lat: body.location.lat,
+            lng: body.location.lng,
+            accuracy: typeof body.location.accuracy === "number" ? body.location.accuracy : undefined,
+          }
+        : undefined;
+
+    if (session.user.role === "employee") {
+      const employee = await Employee.findById(targetEmployeeId).select("fieldWorker status");
+      if (!employee || employee.status !== "active") {
+        return NextResponse.json({ error: "Employee account is inactive" }, { status: 403 });
+      }
+      if (employee.fieldWorker && !rawLocation) {
+        return NextResponse.json(
+          { error: "Field/Site Worker ke liye GPS location required hai. Location permission allow karke dubara try karein." },
+          { status: 400 }
+        );
+      }
+    }
+
+    const location = rawLocation ? await reverseGeocodeLocation(rawLocation) : undefined;
+
+    const update = { checkOut: new Date() };
+    if (location) update.checkOutLocation = location;
+
     // IMPORTANT: always wrap updates in $set. Without it, MongoDB treats the
     // update as a full document REPLACEMENT and silently wipes every other
     // field (employee, date, checkIn, status) - this was the bug causing
     // records to vanish from history.
     const record = await Attendance.findOneAndUpdate(
       { employee: targetEmployeeId, date: todayStr() },
-      { $set: { checkOut: new Date() } },
+      { $set: update },
       { new: true }
     );
 

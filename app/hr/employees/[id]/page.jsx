@@ -352,14 +352,19 @@ function AttendanceTab({ payrollData, loading }) {
               <span className="text-sm text-slate-700">{eff || "-"}</span>
               <span className="text-sm text-slate-700">
                 {d.checkIn ? new Date(d.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+                <LocationLink loc={d.checkInLocation} />
               </span>
               <span className="text-sm text-slate-700">
                 {d.checkOut ? new Date(d.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+                <LocationLink loc={d.checkOutLocation} />
               </span>
             </div>
           );
         })}
       </div>
+      <p className="mt-2 text-[10px] text-slate-400">
+        Location names © OpenStreetMap contributors. Exact landmark depends on available map data.
+      </p>
     </div>
   );
 }
@@ -374,6 +379,31 @@ const STATUS_BAR_COLOR = {
   leave: "bg-blue-400",
   absent: "bg-red-300",
 };
+
+function LocationLink({ loc }) {
+  if (!loc || typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
+
+  const primary = loc.landmark || loc.placeName || loc.area || "Saved GPS location";
+  const secondary = [loc.area, loc.city, loc.district, loc.state]
+    .filter((v, i, arr) => v && arr.indexOf(v) === i)
+    .join(", ");
+
+  return (
+    <div className="mt-1 max-w-[250px]">
+      <a
+        href={`https://www.google.com/maps?q=${loc.lat},${loc.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block text-[11px] text-blue-600 hover:underline"
+        title={loc.displayName || `${loc.lat}, ${loc.lng}`}
+      >
+        📍 {primary}
+      </a>
+      {secondary && <span className="block text-[10px] leading-4 text-slate-400">{secondary}</span>}
+      {loc.postcode && <span className="block text-[10px] text-slate-400">PIN: {loc.postcode}</span>}
+    </div>
+  );
+}
 
 // ---------- PAYROLL TAB ----------
 function PayrollTab({ payrollData, loading, loanOutstanding, month }) {

@@ -71,7 +71,7 @@ export default function EditEmployeePage({ params }) {
 
   if (loadError) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
+      <div className="p-6">
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2 max-w-lg">
           {loadError}
         </p>
@@ -83,11 +83,11 @@ export default function EditEmployeePage({ params }) {
   }
 
   if (!form) {
-    return <div className="min-h-screen bg-slate-50 p-6 text-sm text-slate-500">Loading...</div>;
+    return <div className="p-6 text-sm text-slate-500">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="py-10 px-4">
       <form
         onSubmit={handleSubmit}
         className="max-w-lg mx-auto bg-white border border-slate-200 rounded-xl p-8 space-y-4"
@@ -184,6 +184,19 @@ export default function EditEmployeePage({ params }) {
             onChange={(e) => update("salary", e.target.value)}
             className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
           />
+        </div>
+
+        <div className="flex items-center gap-2 border border-slate-200 rounded-md px-3 py-2.5">
+          <input
+            type="checkbox"
+            id="fieldWorker"
+            checked={!!form.fieldWorker}
+            onChange={(e) => update("fieldWorker", e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="fieldWorker" className="text-sm text-slate-700">
+            Field / Site Worker — check-in aur check-out pe GPS location required hoga
+          </label>
         </div>
 
         <button

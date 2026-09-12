@@ -113,15 +113,21 @@ async function computeMonthPayroll(employee, month, depth = 0) {
   };
 }
 
-// GET /api/payroll/[employeeId]?month=YYYY-MM -> HR only
+// GET /api/payroll/[employeeId]?month=YYYY-MM
+//   - hr: can view any employee's payroll
+//   - employee: can ONLY view their own (employeeId is forced from session, URL value ignored)
 export async function GET(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "hr") {
+    if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    let { employeeId } = await params;
+    if (session.user.role === "employee") {
+      employeeId = session.user.employeeId; // hard-locked to own record, URL param ignored
+    } else if (session.user.role !== "hr") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { employeeId } = await params;
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month") || new Date().toISOString().slice(0, 7);
 

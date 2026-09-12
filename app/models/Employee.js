@@ -32,6 +32,10 @@ const EmployeeSchema = new mongoose.Schema(
       enum: ["active", "inactive"],
       default: "active",
     },
+    fieldWorker: {
+      type: Boolean,
+      default: false, // if true, GPS location is captured/required on check-in and check-out
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // which HR account created this record

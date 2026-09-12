@@ -18,7 +18,7 @@ export async function GET(req, { params }) {
 
     const { id } = await params; // Next.js 15+/16: route params are async
     await dbConnect();
-    const employee = await Employee.findById(id);
+    const employee = await Employee.findById(id).select("+salary");
     if (!employee) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ employee });
   } catch (err) {
@@ -36,6 +36,9 @@ export async function PUT(req, { params }) {
     const updates = await req.json();
     delete updates.employeeId; // don't allow ID reassignment via this route
     delete updates._id;
+    if (Object.prototype.hasOwnProperty.call(updates, "fieldWorker")) {
+      updates.fieldWorker = !!updates.fieldWorker;
+    }
 
     await dbConnect();
 

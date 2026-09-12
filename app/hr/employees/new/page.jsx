@@ -14,6 +14,7 @@ const initial = {
   dateOfJoining: "",
   wageType: "monthly",
   salary: "",
+  fieldWorker: false,
   address: "",
   bloodGroup: "",
   emergencyContact: "",
@@ -66,7 +67,7 @@ export default function NewEmployeePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 py-10 px-4">
+    <div className="py-10 px-4">
       <form
         onSubmit={handleSubmit}
         className="max-w-lg mx-auto bg-white border border-slate-200 rounded-xl p-8 space-y-4"
@@ -134,6 +135,19 @@ export default function NewEmployeePage() {
             <option value="female">Female</option>
             <option value="other">Other</option>
           </select>
+        </div>
+
+        <div className="flex items-center gap-2 border border-slate-200 rounded-md px-3 py-2.5">
+          <input
+            type="checkbox"
+            id="fieldWorker"
+            checked={form.fieldWorker}
+            onChange={(e) => update("fieldWorker", e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="fieldWorker" className="text-sm text-slate-700">
+            Field / Site Worker — check-in/out pe GPS location required hoga
+          </label>
         </div>
 
         <div className="space-y-1">

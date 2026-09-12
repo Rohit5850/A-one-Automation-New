@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: "/hr/dashboard", label: "Home", icon: HomeIcon },
   { href: "/hr/employees/all", label: "Org", icon: OrgIcon },
   { href: "/hr/attendance", label: "Attendance", icon: ClockIcon },
-  { href: "/hr/holidays", label: "Leave", icon: CalendarIcon },
+  { href: "/hr/leave-requests", label: "Leave", icon: CalendarIcon },
   { href: "/hr/salaries", label: "Finances", icon: WalletIcon },
   { href: "/hr/users", label: "Users", icon: UsersIcon },
 ];
@@ -19,6 +19,7 @@ export default function HRShell({ children }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [search, setSearch] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
 
   const initial = session?.user?.email?.[0]?.toUpperCase() || "H";
 
@@ -64,13 +65,29 @@ export default function HRShell({ children }) {
             />
             <path d="M13.7 21a2 2 0 01-3.4 0" stroke="currentColor" strokeWidth="2" />
           </svg>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold"
-            title="Sign out"
-          >
-            {initial}
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold"
+              title="Account"
+            >
+              {initial}
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-10 bg-white text-slate-800 border border-slate-200 rounded-md shadow-lg text-sm z-30 w-48 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100">
+                  <p className="font-medium truncate">{session?.user?.email}</p>
+                  <p className="text-xs text-slate-400 uppercase">{session?.user?.role}</p>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-red-600"
+                >
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

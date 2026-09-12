@@ -37,6 +37,8 @@ export async function buildMonthCalendar(employeeId, month) {
         reason: existing.reason || "",
         checkIn: existing.checkIn,
         checkOut: existing.checkOut,
+        checkInLocation: existing.checkInLocation,
+        checkOutLocation: existing.checkOutLocation,
         _id: existing._id,
       });
       continue;
