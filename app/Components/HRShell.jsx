@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
@@ -27,6 +27,16 @@ export default function HRShell({ children }) {
     e.preventDefault();
     if (!search.trim()) return;
     router.push(`/hr/employees/all?q=${encodeURIComponent(search.trim())}`);
+  }
+
+  async function handleSignOut() {
+    await fetch("/api/auth/role-signout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "hr" }),
+    });
+    router.push("/login");
+    router.refresh();
   }
 
   return (
@@ -80,7 +90,7 @@ export default function HRShell({ children }) {
                   <p className="text-xs text-slate-400 uppercase">{session?.user?.role}</p>
                 </div>
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={handleSignOut}
                   className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-red-600"
                 >
                   Sign out

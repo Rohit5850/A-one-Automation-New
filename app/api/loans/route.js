@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import Loan from "@/app/models/Loan";
+import Employee from "@/app/models/Employee";
+import { monthFromDate, validateLoanTerms } from "@/app/lib/payrollRules";
 
 // GET /api/loans?employeeId=... -> HR only
 export async function GET(req) {
@@ -36,16 +38,41 @@ export async function POST(req) {
     const body = await req.json().catch(() => ({}));
     const { employeeId, amount, monthlyDeduction, totalMonths, startMonth, remarks } = body;
 
-    if (!employeeId || !amount || !monthlyDeduction || !totalMonths || !startMonth) {
+    if (!employeeId || !startMonth) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+    if (!/^\d{4}-\d{2}$/.test(startMonth)) {
+      return NextResponse.json({ error: "Start month invalid hai" }, { status: 400 });
+    }
+    const termError = validateLoanTerms(amount, monthlyDeduction, Number(totalMonths));
+    if (termError) return NextResponse.json({ error: termError }, { status: 400 });
 
     await dbConnect();
+    const employee = await Employee.findById(employeeId).select("_id dateOfJoining dateOfLeaving status");
+    if (!employee) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    if (employee.status !== "active") {
+      return NextResponse.json({ error: "Inactive employee ko naya loan nahi diya ja sakta" }, { status: 400 });
+    }
+    const joinMonth = monthFromDate(employee.dateOfJoining);
+    const leaveMonth = monthFromDate(employee.dateOfLeaving);
+    if (joinMonth && startMonth < joinMonth) {
+      return NextResponse.json(
+        { error: "Loan start month employee ki joining month se pehle nahi ho sakta" },
+        { status: 400 }
+      );
+    }
+    if (leaveMonth && startMonth > leaveMonth) {
+      return NextResponse.json(
+        { error: "Loan start month employee ki leaving month ke baad nahi ho sakta" },
+        { status: 400 }
+      );
+    }
+
     const loan = await Loan.create({
       employee: employeeId,
-      amount,
-      monthlyDeduction,
-      totalMonths,
+      amount: Number(amount),
+      monthlyDeduction: Number(monthlyDeduction),
+      totalMonths: Number(totalMonths),
       startMonth,
       remarks,
     });

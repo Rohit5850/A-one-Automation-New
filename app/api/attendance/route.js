@@ -5,12 +5,91 @@ import dbConnect from "@/app/lib/dbConnect";
 import Attendance from "@/app/models/Attendance";
 import Employee from "@/app/models/Employee";
 import { reverseGeocodeLocation } from "@/app/lib/reverseGeocode";
+import { todayDateKey } from "@/app/lib/payrollRules";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+  return todayDateKey();
 }
 
-// GET /api/attendance
+function hideLocation(record) {
+  const obj = record?.toObject ? record.toObject() : { ...record };
+  delete obj.checkInLocation;
+  delete obj.checkOutLocation;
+  if (Array.isArray(obj.sessions)) {
+    obj.sessions = obj.sessions.map(({ checkInLocation, checkOutLocation, ...session }) => session);
+  }
+  return obj;
+}
+
+
+function withSessionMetrics(record) {
+  const obj = record?.toObject ? record.toObject() : { ...record };
+  let sessions = Array.isArray(obj.sessions) ? obj.sessions : [];
+  if (sessions.length === 0 && obj.checkIn) {
+    sessions = [{
+      checkIn: obj.checkIn,
+      checkOut: obj.checkOut,
+      checkInLocation: obj.checkInLocation,
+      checkOutLocation: obj.checkOutLocation,
+    }];
+  }
+  sessions = [...sessions].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
+  let workedMs = 0;
+  let breakMs = 0;
+  sessions.forEach((session, index) => {
+    if (session.checkIn && session.checkOut) {
+      workedMs += Math.max(0, new Date(session.checkOut) - new Date(session.checkIn));
+    }
+    if (index > 0 && sessions[index - 1]?.checkOut && session.checkIn) {
+      breakMs += Math.max(0, new Date(session.checkIn) - new Date(sessions[index - 1].checkOut));
+    }
+  });
+  return { ...obj, sessions, workedMs, breakMs };
+}
+function rawLocationFrom(body) {
+  return body.location && typeof body.location.lat === "number" && typeof body.location.lng === "number"
+    ? {
+        lat: body.location.lat,
+        lng: body.location.lng,
+        accuracy: typeof body.location.accuracy === "number" ? body.location.accuracy : undefined,
+      }
+    : undefined;
+}
+
+// Old records had only checkIn/checkOut. Convert them in-memory the first time
+// they are punched again so old data remains usable without a migration script.
+function ensureLegacySession(record) {
+  if (!record) return;
+  if ((!record.sessions || record.sessions.length === 0) && record.checkIn) {
+    record.sessions = [
+      {
+        checkIn: record.checkIn,
+        checkOut: record.checkOut || null,
+        checkInLocation: record.checkInLocation,
+        checkOutLocation: record.checkOutLocation,
+      },
+    ];
+  }
+}
+
+async function employeeLocationRule(targetEmployeeId) {
+  const employee = await Employee.findById(targetEmployeeId).select(
+    "fieldWorker showLocationToEmployee status"
+  );
+  if (!employee || employee.status !== "active") {
+    return { error: "Employee account is inactive" };
+  }
+
+  // GPS is required for Field/Site Workers. If HR enables Employee Location View,
+  // GPS is also required from that point onward so there is an actual location
+  // to show in the employee attendance history.
+  return {
+    employee,
+    locationRequired: !!employee.fieldWorker || !!employee.showLocationToEmployee,
+    canSeeLocation: !!employee.showLocationToEmployee,
+  };
+}
+
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +98,7 @@ export async function GET(req) {
     await dbConnect();
     const { searchParams } = new URL(req.url);
 
-    let filter = {};
+    const filter = {};
     if (session.user.role === "employee") {
       filter.employee = session.user.employeeId;
     } else if (session.user.role === "hr") {
@@ -34,29 +113,63 @@ export async function GET(req) {
       filter.date = { $gte: `${year}-01-01`, $lte: `${year}-12-31` };
     }
 
-    const records = await Attendance.find(filter)
-      .sort({ date: -1 })
-      .limit(year ? 366 : 1830);
+    // The employee attendance screen uses this as the authoritative punch state.
+    // This fixes refresh / logout-login cases where the monthly calendar can be stale
+    // while the database already has an active Check-In.
+    if (searchParams.get("today") === "1") {
+      filter.date = todayStr();
+      const record = await Attendance.findOne(filter);
 
-    return NextResponse.json({ records });
+      if (session.user.role === "employee") {
+        const rule = await employeeLocationRule(session.user.employeeId);
+        if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
+
+        const enriched = record ? withSessionMetrics(record) : null;
+        return NextResponse.json({
+          record: enriched && !rule.canSeeLocation ? hideLocation(enriched) : enriched,
+          showLocationToEmployee: rule.canSeeLocation,
+          locationRequired: rule.locationRequired,
+        });
+      }
+
+      return NextResponse.json({ record: record ? withSessionMetrics(record) : null });
+    }
+
+    const records = await Attendance.find(filter).sort({ date: -1 }).limit(year ? 366 : 1830);
+    const enrichedRecords = records.map(withSessionMetrics);
+
+    if (session.user.role === "employee") {
+      const rule = await employeeLocationRule(session.user.employeeId);
+      if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
+      if (!rule.canSeeLocation) {
+        return NextResponse.json({
+          records: enrichedRecords.map(hideLocation),
+          showLocationToEmployee: false,
+          locationRequired: rule.locationRequired,
+        });
+      }
+      return NextResponse.json({
+        records: enrichedRecords,
+        showLocationToEmployee: true,
+        locationRequired: rule.locationRequired,
+      });
+    }
+
+    return NextResponse.json({ records: enrichedRecords });
   } catch (err) {
     console.error("GET /api/attendance error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
 
-// POST /api/attendance -> marks today's check-in.
-//   - employee role: marks for themselves
-//   - hr role: must pass { employeeId } (the employee's Mongo _id) in the body
-// This explicitly handles all 3 cases correctly: no record yet, a record that
-// already has a check-in, and a record that exists but was reset (checkIn is null).
+// Check in. If a previous session was already checked out today, a NEW session
+// is appended. If a session is still active, a second check-in is rejected.
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
-
     let targetEmployeeId;
     if (session.user.role === "employee") {
       targetEmployeeId = session.user.employeeId;
@@ -69,73 +182,74 @@ export async function POST(req) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const date = todayStr();
     await dbConnect();
+    const rawLocation = rawLocationFrom(body);
+    let visibility = true;
 
-    let record = await Attendance.findOne({ employee: targetEmployeeId, date });
-
-    if (record && record.checkIn) {
-      return NextResponse.json({ error: "Already checked in today" }, { status: 400 });
-    }
-
-    const rawLocation =
-      body.location && typeof body.location.lat === "number" && typeof body.location.lng === "number"
-        ? {
-            lat: body.location.lat,
-            lng: body.location.lng,
-            accuracy: typeof body.location.accuracy === "number" ? body.location.accuracy : undefined,
-          }
-        : undefined;
-
-    // Always read the CURRENT employee setting. If HR turns Field/Site Worker ON later,
-    // GPS becomes mandatory from the very next employee check-in/check-out. Turning it OFF
-    // restores the old normal flow immediately. HR manual attendance is not affected.
     if (session.user.role === "employee") {
-      const employee = await Employee.findById(targetEmployeeId).select("fieldWorker status");
-      if (!employee || employee.status !== "active") {
-        return NextResponse.json({ error: "Employee account is inactive" }, { status: 403 });
-      }
-      if (employee.fieldWorker && !rawLocation) {
+      const rule = await employeeLocationRule(targetEmployeeId);
+      if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
+      visibility = rule.canSeeLocation;
+      if (rule.locationRequired && !rawLocation) {
         return NextResponse.json(
-          { error: "Field/Site Worker ke liye GPS location required hai. Location permission allow karke dubara try karein." },
+          { error: "Please select Allow for location. Only then Check-In or Check-Out is allowed." },
           { status: 400 }
         );
       }
     }
 
     const location = rawLocation ? await reverseGeocodeLocation(rawLocation) : undefined;
+    const date = todayStr();
+    const now = new Date();
+    let record = await Attendance.findOne({ employee: targetEmployeeId, date });
 
     if (record) {
-      // Record exists (e.g. after a reset) but has no check-in yet - set it explicitly.
-      record.checkIn = new Date();
-      record.status = body.status || record.status || "present";
-      if (location) record.checkInLocation = location;
+      ensureLegacySession(record);
+      const activeSession = record.sessions?.find((s) => s.checkIn && !s.checkOut);
+      if (activeSession) {
+        return NextResponse.json(
+          { error: "Already checked in. Please Check-Out before checking in again." },
+          { status: 400 }
+        );
+      }
+
+      record.sessions.push({ checkIn: now, checkInLocation: location });
+      if (!record.checkIn) record.checkIn = now;
+      if (!record.checkInLocation && location) record.checkInLocation = location;
+      record.checkOut = null; // day currently has an active session
+      record.status = body.status || "present";
+      if (record.status === "present") record.reason = "";
       await record.save();
     } else {
       record = await Attendance.create({
         employee: targetEmployeeId,
         date,
-        checkIn: new Date(),
+        checkIn: now,
+        checkOut: null,
         status: body.status || "present",
         checkInLocation: location,
+        sessions: [{ checkIn: now, checkInLocation: location }],
       });
     }
 
-    return NextResponse.json({ record }, { status: 201 });
+    return NextResponse.json(
+      { record: session.user.role === "employee" && !visibility ? hideLocation(record) : record },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("POST /api/attendance error:", err);
     return NextResponse.json({ error: "Could not mark attendance" }, { status: 500 });
   }
 }
 
-// PATCH /api/attendance -> marks today's check-out.
+// Check out the currently open session. After this, the employee may check in
+// again the same day; the gap becomes break time.
 export async function PATCH(req) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
-
     let targetEmployeeId;
     if (session.user.role === "employee") {
       targetEmployeeId = session.user.employeeId;
@@ -149,48 +263,46 @@ export async function PATCH(req) {
     }
 
     await dbConnect();
-
-    const rawLocation =
-      body.location && typeof body.location.lat === "number" && typeof body.location.lng === "number"
-        ? {
-            lat: body.location.lat,
-            lng: body.location.lng,
-            accuracy: typeof body.location.accuracy === "number" ? body.location.accuracy : undefined,
-          }
-        : undefined;
+    const rawLocation = rawLocationFrom(body);
+    let visibility = true;
 
     if (session.user.role === "employee") {
-      const employee = await Employee.findById(targetEmployeeId).select("fieldWorker status");
-      if (!employee || employee.status !== "active") {
-        return NextResponse.json({ error: "Employee account is inactive" }, { status: 403 });
-      }
-      if (employee.fieldWorker && !rawLocation) {
+      const rule = await employeeLocationRule(targetEmployeeId);
+      if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
+      visibility = rule.canSeeLocation;
+      if (rule.locationRequired && !rawLocation) {
         return NextResponse.json(
-          { error: "Field/Site Worker ke liye GPS location required hai. Location permission allow karke dubara try karein." },
+          { error: "Please select Allow for location. Only then Check-In or Check-Out is allowed." },
           { status: 400 }
         );
       }
     }
 
-    const location = rawLocation ? await reverseGeocodeLocation(rawLocation) : undefined;
-
-    const update = { checkOut: new Date() };
-    if (location) update.checkOutLocation = location;
-
-    // IMPORTANT: always wrap updates in $set. Without it, MongoDB treats the
-    // update as a full document REPLACEMENT and silently wipes every other
-    // field (employee, date, checkIn, status) - this was the bug causing
-    // records to vanish from history.
-    const record = await Attendance.findOneAndUpdate(
-      { employee: targetEmployeeId, date: todayStr() },
-      { $set: update },
-      { new: true }
-    );
-
+    const record = await Attendance.findOne({ employee: targetEmployeeId, date: todayStr() });
     if (!record) {
       return NextResponse.json({ error: "No check-in found for today" }, { status: 400 });
     }
-    return NextResponse.json({ record });
+
+    ensureLegacySession(record);
+    const activeSession = [...(record.sessions || [])].reverse().find((s) => s.checkIn && !s.checkOut);
+    if (!activeSession) {
+      return NextResponse.json(
+        { error: "No active Check-In found. Please Check-In first." },
+        { status: 400 }
+      );
+    }
+
+    const location = rawLocation ? await reverseGeocodeLocation(rawLocation) : undefined;
+    const now = new Date();
+    activeSession.checkOut = now;
+    if (location) activeSession.checkOutLocation = location;
+    record.checkOut = now;
+    if (location) record.checkOutLocation = location;
+    await record.save();
+
+    return NextResponse.json({
+      record: session.user.role === "employee" && !visibility ? hideLocation(record) : record,
+    });
   } catch (err) {
     console.error("PATCH /api/attendance error:", err);
     return NextResponse.json({ error: "Could not mark check-out" }, { status: 500 });

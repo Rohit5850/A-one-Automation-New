@@ -3,13 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import LeaveRequest from "@/app/models/LeaveRequest";
-import { computeLeaveBalance } from "@/app/lib/leaveBalance";
-
-function daysInclusive(fromDate, toDate) {
-  const from = new Date(fromDate);
-  const to = new Date(toDate);
-  return Math.round((to - from) / 86400000) + 1;
-}
+import { computeLeaveBalance, countLeaveWorkingDays } from "@/app/lib/leaveBalance";
 
 // GET /api/leave-requests
 //   - employee: own requests only
@@ -69,10 +63,17 @@ export async function POST(req) {
       return NextResponse.json({ error: "To date must be after From date" }, { status: 400 });
     }
 
-    // Soft balance check (informational, doesn't block unpaid leave)
+    const requestedDays = await countLeaveWorkingDays(session.user.employeeId, fromDate, toDate);
+    if (requestedDays <= 0) {
+      return NextResponse.json(
+        { error: "Selected range me koi working day nahi hai" },
+        { status: 400 }
+      );
+    }
+
+    // Earned and paternity are paid leaves and must have enough balance.
     if (leaveType !== "unpaid") {
       const balance = await computeLeaveBalance(session.user.employeeId);
-      const requestedDays = daysInclusive(fromDate, toDate);
       const available = balance[leaveType].available;
       if (requestedDays > available) {
         return NextResponse.json(
@@ -83,6 +84,19 @@ export async function POST(req) {
     }
 
     await dbConnect();
+    const overlapping = await LeaveRequest.findOne({
+      employee: session.user.employeeId,
+      status: { $in: ["pending", "approved"] },
+      fromDate: { $lte: toDate },
+      toDate: { $gte: fromDate },
+    });
+    if (overlapping) {
+      return NextResponse.json(
+        { error: "Is date range me pehle se pending/approved leave request hai" },
+        { status: 400 }
+      );
+    }
+
     const request = await LeaveRequest.create({
       employee: session.user.employeeId,
       fromDate,

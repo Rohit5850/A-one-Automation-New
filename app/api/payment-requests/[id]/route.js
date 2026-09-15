@@ -5,9 +5,11 @@ import dbConnect from "@/app/lib/dbConnect";
 import PaymentRequest from "@/app/models/PaymentRequest";
 import Loan from "@/app/models/Loan";
 import Transaction from "@/app/models/Transaction";
+import Employee from "@/app/models/Employee";
+import { validateLoanTerms, todayDateKey } from "@/app/lib/payrollRules";
 
 function currentMonthStr() {
-  return new Date().toISOString().slice(0, 7);
+  return todayDateKey().slice(0, 7);
 }
 
 export async function PATCH(req, { params }) {
@@ -30,6 +32,20 @@ export async function PATCH(req, { params }) {
     if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (request.status !== "pending") {
       return NextResponse.json({ error: "Ye request already review ho chuki hai" }, { status: 400 });
+    }
+
+    if (status === "approved") {
+      const employee = await Employee.findById(request.employee).select("status");
+      if (!employee || employee.status !== "active") {
+        return NextResponse.json(
+          { error: "Inactive employee ki payment request approve nahi ki ja sakti" },
+          { status: 400 }
+        );
+      }
+      if (request.type === "loan") {
+        const termError = validateLoanTerms(request.amount, request.monthlyDeduction, request.totalMonths);
+        if (termError) return NextResponse.json({ error: termError }, { status: 400 });
+      }
     }
 
     request.status = status;

@@ -8,7 +8,7 @@ const TransactionSchema = new mongoose.Schema(
       enum: ["salary", "bonus", "advance", "loan-collect"],
       required: true,
     },
-    amount: { type: Number, required: true },
+    amount: { type: Number, required: true, min: 0.01 },
     date: { type: Date, required: true },
     mode: { type: String, enum: ["cash", "online"], required: true },
     remarks: { type: String, required: true, trim: true }, // compulsory, as requested

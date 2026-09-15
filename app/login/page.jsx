@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn, getSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
@@ -29,12 +29,23 @@ export default function LoginPage() {
       return;
     }
 
-    const session = await getSession();
-    if (session?.user?.role === "hr") {
+    const persistRes = await fetch("/api/auth/persist-role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const persistData = await persistRes.json().catch(() => ({}));
+    if (!persistRes.ok || !persistData?.role) {
+      setError("Login hua, lekin session save nahi ho paya. Please dubara try karein.");
+      return;
+    }
+
+    if (persistData.role === "hr") {
       router.push("/hr/dashboard");
     } else {
       router.push("/employee/dashboard");
     }
+    router.refresh();
   }
 
   return (

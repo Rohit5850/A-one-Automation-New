@@ -5,10 +5,12 @@ import dbConnect from "@/app/lib/dbConnect";
 import LeaveRequest from "@/app/models/LeaveRequest";
 import Attendance from "@/app/models/Attendance";
 import Holiday from "@/app/models/Holiday";
+import Employee from "@/app/models/Employee";
+import { dateKeyFromDate } from "@/app/lib/payrollRules";
 
 function* dateRange(fromDate, toDate) {
-  let d = new Date(fromDate);
-  const end = new Date(toDate);
+  let d = new Date(`${fromDate}T00:00:00Z`);
+  const end = new Date(`${toDate}T00:00:00Z`);
   while (d <= end) {
     yield d.toISOString().slice(0, 10);
     d = new Date(d.getTime() + 86400000);
@@ -31,20 +33,37 @@ export async function PATCH(req, { params }) {
     }
 
     await dbConnect();
-    const request = await LeaveRequest.findByIdAndUpdate(
-      id,
-      { $set: { status, reviewNote, reviewedBy: session.user.id } },
-      { new: true }
-    );
+    const request = await LeaveRequest.findById(id);
     if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (request.status !== "pending") {
+      return NextResponse.json({ error: "Ye leave request already review ho chuki hai" }, { status: 400 });
+    }
+
+    request.status = status;
+    request.reviewNote = reviewNote;
+    request.reviewedBy = session.user.id;
+    await request.save();
 
     if (status === "approved") {
-      // Mark each day in the range as "leave", skipping days that are already
-      // a paid holiday or the weekly-off (Sunday) - those don't need a leave entry.
+      const employee = await Employee.findById(request.employee).select("dateOfJoining dateOfLeaving");
+      const joinDate = dateKeyFromDate(employee?.dateOfJoining);
+      const leaveDate = dateKeyFromDate(employee?.dateOfLeaving);
+
+      // Mark only genuine working days inside the employee's employment period.
+      // Sunday and configured holidays remain paid Week Off/Holiday, not leave.
       for (const date of dateRange(request.fromDate, request.toDate)) {
-        const isSunday = new Date(date).getDay() === 0;
+        if (joinDate && date < joinDate) continue;
+        if (leaveDate && date > leaveDate) continue;
+
+        const isSunday = new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
         const holiday = await Holiday.findOne({ date });
         if (isSunday || holiday) continue;
+
+        const existing = await Attendance.findOne({ employee: request.employee, date });
+        const hasPunch =
+          !!existing?.checkIn ||
+          (Array.isArray(existing?.sessions) && existing.sessions.some((s) => s?.checkIn));
+        if (hasPunch || existing?.status === "present" || existing?.status === "half-day") continue;
 
         await Attendance.findOneAndUpdate(
           { employee: request.employee, date },

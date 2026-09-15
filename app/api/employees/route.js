@@ -5,6 +5,7 @@ import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
+import { monthFromDate, todayDateKey } from "@/app/lib/payrollRules";
 
 // GET /api/employees -> HR only: list all employee cards, or ?employeeId=EMP-0001 to find one
 export async function GET(req) {
@@ -46,6 +47,7 @@ export async function POST(req) {
     dateOfLeaving,
     wageType, // "daily" | "monthly" - required, decides how salary auto-calculates from attendance
     salary, // monthly amount if wageType=monthly, per-day rate if wageType=daily
+    fieldWorker,
     address,
     photoUrl,
     bloodGroup,
@@ -64,6 +66,13 @@ export async function POST(req) {
       { error: "Wage type (daily/monthly) is required" },
       { status: 400 }
     );
+  }
+  const salaryNumber = salary === "" || salary === null || salary === undefined ? undefined : Number(salary);
+  if (salaryNumber !== undefined && (!Number.isFinite(salaryNumber) || salaryNumber < 0)) {
+    return NextResponse.json({ error: "Salary/Rate valid non-negative amount hona chahiye" }, { status: 400 });
+  }
+  if (dateOfJoining && dateOfLeaving && new Date(dateOfLeaving) < new Date(dateOfJoining)) {
+    return NextResponse.json({ error: "Date of Leaving joining date se pehle nahi ho sakti" }, { status: 400 });
   }
 
   await dbConnect();
@@ -85,7 +94,18 @@ export async function POST(req) {
       dateOfJoining,
       dateOfLeaving: dateOfLeaving || null,
       wageType,
-      salary: salary ? Number(salary) : undefined,
+      salary: salaryNumber,
+      salaryHistory:
+        salaryNumber !== undefined
+          ? [
+              {
+                amount: salaryNumber,
+                wageType,
+                effectiveMonth: monthFromDate(dateOfJoining) || todayDateKey().slice(0, 7),
+              },
+            ]
+          : [],
+      fieldWorker: !!fieldWorker,
       address,
       photoUrl,
       bloodGroup,

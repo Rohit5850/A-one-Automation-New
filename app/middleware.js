@@ -1,39 +1,87 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import {
+  ROLE_SESSION_COOKIES,
+  inferRequiredRole,
+  inferRoleFromReferer,
+  replaceNextAuthSessionCookies,
+} from "@/app/lib/roleSession";
 
-export default withAuth(
-  function middleware(req) {
-    const { pathname } = req.nextUrl;
-    const role = req.nextauth.token?.role;
+async function getRoleToken(req, role) {
+  if (!role || !ROLE_SESSION_COOKIES[role]) return null;
+  return getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: ROLE_SESSION_COOKIES[role],
+  });
+}
 
-    // HR-only section
-    if (pathname.startsWith("/hr") && role !== "hr") {
-      return NextResponse.redirect(new URL("/login?error=forbidden", req.url));
-    }
+async function getDefaultToken(req) {
+  return getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+}
 
-    // Employee-only section
-    if (pathname.startsWith("/employee") && role !== "employee") {
-      return NextResponse.redirect(new URL("/login?error=forbidden", req.url));
-    }
+function withRoleCookie(req, role) {
+  const rawRoleToken = req.cookies.get(ROLE_SESSION_COOKIES[role])?.value;
+  if (!rawRoleToken) return NextResponse.next();
 
+  const headers = new Headers(req.headers);
+  headers.set(
+    "cookie",
+    replaceNextAuthSessionCookies(req.headers.get("cookie") || "", rawRoleToken)
+  );
+
+  return NextResponse.next({ request: { headers } });
+}
+
+function unauthorized(req) {
+  // Preserve the project's previous behavior: protected requests are sent to login.
+  return NextResponse.redirect(new URL("/login", req.url));
+}
+
+export default async function middleware(req) {
+  const { pathname } = req.nextUrl;
+  const referer = req.headers.get("referer");
+
+  // SessionProvider calls this endpoint from the currently open HR/Employee page.
+  // Present that page's role-specific token so both tabs keep the correct identity.
+  if (pathname === "/api/auth/session") {
+    const role = inferRoleFromReferer(referer);
+    if (!role) return NextResponse.next();
+
+    const roleToken = await getRoleToken(req, role);
+    if (roleToken?.role === role) return withRoleCookie(req, role);
     return NextResponse.next();
-  },
-  {
-    callbacks: {
-      // Just require *some* valid session; role check happens above
-      authorized: ({ token }) => !!token,
-    },
-    pages: {
-      signIn: "/login",
-    },
   }
-);
 
-// Protect these paths (pages AND their API routes)
+  const requiredRole = inferRequiredRole(pathname, referer);
+
+  if (requiredRole) {
+    const roleToken = await getRoleToken(req, requiredRole);
+    if (roleToken?.role === requiredRole) {
+      return withRoleCookie(req, requiredRole);
+    }
+
+    // Backward-compatible fallback for a session created before this update.
+    const defaultToken = await getDefaultToken(req);
+    if (defaultToken?.role === requiredRole) {
+      return NextResponse.next();
+    }
+
+    return unauthorized(req);
+  }
+
+  // Shared API called without a browser referrer: retain normal NextAuth behavior.
+  const defaultToken = await getDefaultToken(req);
+  if (defaultToken) return NextResponse.next();
+
+  return unauthorized(req);
+}
+
 export const config = {
   matcher: [
     "/hr/:path*",
     "/employee/:path*",
+    "/api/auth/session",
     "/api/employees/:path*",
     "/api/attendance/:path*",
     "/api/me/:path*",
@@ -41,6 +89,7 @@ export const config = {
     "/api/leave-balance/:path*",
     "/api/my-calendar/:path*",
     "/api/dashboard-summary/:path*",
+    "/api/payment-requests/:path*",
     "/api/holidays/:path*",
     "/api/loans/:path*",
     "/api/transactions/:path*",

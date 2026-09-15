@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 
 const NAV_ITEMS = [
@@ -14,10 +14,21 @@ const NAV_ITEMS = [
 
 export default function EmployeeShell({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const [showMenu, setShowMenu] = useState(false);
 
   const initial = session?.user?.email?.[0]?.toUpperCase() || "E";
+
+  async function handleSignOut() {
+    await fetch("/api/auth/role-signout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "employee" }),
+    });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -45,7 +56,7 @@ export default function EmployeeShell({ children }) {
                 <p className="text-xs text-slate-400 uppercase">Employee</p>
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={handleSignOut}
                 className="w-full text-left px-4 py-2.5 hover:bg-slate-50 text-red-600"
               >
                 Sign out

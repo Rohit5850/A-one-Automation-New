@@ -13,6 +13,13 @@ function formatDuration(checkIn, checkOut) {
   return `${hours}h ${minutes}m`;
 }
 
+function formatMs(ms) {
+  if (!ms || ms <= 0) return "-";
+  const hours = Math.floor(ms / 3600000);
+  const minutes = Math.floor((ms % 3600000) / 60000);
+  return `${hours}h ${minutes}m`;
+}
+
 // Converts a Date's local time into the "HH:MM" value <input type="time"> needs
 function toTimeInputValue(dateVal) {
   if (!dateVal) return "";
@@ -116,6 +123,12 @@ export default function HRAttendancePage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const todayRecord = records.find((r) => r.date === today);
+  const todaySessions = todayRecord?.sessions?.length
+    ? todayRecord.sessions
+    : todayRecord?.checkIn
+      ? [{ checkIn: todayRecord.checkIn, checkOut: todayRecord.checkOut }]
+      : [];
+  const activeSession = [...todaySessions].reverse().find((s) => s.checkIn && !s.checkOut);
 
   async function handleCheckIn() {
     if (!employee) return;
@@ -196,23 +209,18 @@ export default function HRAttendancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="font-semibold text-slate-900">Mark Attendance</h1>
-        <div className="flex gap-3">
-          <Link
-            href="/hr/employees/all"
-            className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
-          >
-            All Employees
-          </Link>
-          <Link href="/hr/dashboard" className="text-sm text-slate-500 hover:text-slate-800 self-center">
-            ← Back to Dashboard
-          </Link>
-        </div>
-      </header>
+    <div>
+      <div className="px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-xl font-semibold text-slate-900">Mark Attendance</h1>
+        <Link
+          href="/hr/employees/all"
+          className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+        >
+          All Employees
+        </Link>
+      </div>
 
-      <main className="max-w-4xl mx-auto p-6 space-y-6">
+      <main className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
         {!employee && (
           <>
             <input
@@ -266,22 +274,25 @@ export default function HRAttendancePage() {
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={handleCheckIn}
-                  disabled={marking || !!todayRecord?.checkIn}
+                  disabled={marking || !!activeSession}
                   className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-50"
                 >
-                  {todayRecord?.checkIn
-                    ? `Checked In (${new Date(todayRecord.checkIn).toLocaleTimeString()})`
+                  {activeSession
+                    ? `Checked In (${new Date(activeSession.checkIn).toLocaleTimeString()})`
                     : "Check In"}
                 </button>
                 <button
                   onClick={handleCheckOut}
-                  disabled={marking || !todayRecord?.checkIn || !!todayRecord?.checkOut}
+                  disabled={marking || !activeSession}
                   className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50 disabled:opacity-50"
                 >
-                  {todayRecord?.checkOut
-                    ? `Checked Out (${new Date(todayRecord.checkOut).toLocaleTimeString()})`
-                    : "Check Out"}
+                  {activeSession ? "Check Out" : "Check Out"}
                 </button>
+                {todayRecord?.checkIn && !activeSession && (
+                  <span className="text-xs text-slate-500 self-center">
+                    Worked: {formatMs(todayRecord.workedMs)} · Break: {formatMs(todayRecord.breakMs)}
+                  </span>
+                )}
                 <button
                   onClick={handleReset}
                   disabled={marking || !todayRecord}
@@ -424,15 +435,17 @@ export default function HRAttendancePage() {
                     <th className="px-4 py-2">Date</th>
                     <th className="px-4 py-2">Check-in Time</th>
                     <th className="px-4 py-2">Check-out Time</th>
-                    <th className="px-4 py-2">Total Time</th>
+                    <th className="px-4 py-2">Worked Time</th>
+                    <th className="px-4 py-2">Break Time</th>
                     <th className="px-4 py-2">Status</th>
                     <th className="px-4 py-2">Reason</th>
+                    <th className="px-4 py-2 min-w-[280px]">Location</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                      <td colSpan={8} className="px-4 py-6 text-center text-slate-400">
                         Koi record nahi mila.
                       </td>
                     </tr>
@@ -441,14 +454,30 @@ export default function HRAttendancePage() {
                     <tr key={r._id} className="border-t border-slate-100">
                       <td className="px-4 py-2">{r.date}</td>
                       <td className="px-4 py-2">
-                        {r.checkIn ? new Date(r.checkIn).toLocaleTimeString() : "-"}
+                        {(r.sessions?.length ? r.sessions : [{ checkIn: r.checkIn }]).map((session, i) => (
+                          <div key={i}>{session.checkIn ? new Date(session.checkIn).toLocaleTimeString() : "-"}</div>
+                        ))}
                       </td>
                       <td className="px-4 py-2">
-                        {r.checkOut ? new Date(r.checkOut).toLocaleTimeString() : "-"}
+                        {(r.sessions?.length ? r.sessions : [{ checkOut: r.checkOut }]).map((session, i) => (
+                          <div key={i}>{session.checkOut ? new Date(session.checkOut).toLocaleTimeString() : "Working"}</div>
+                        ))}
                       </td>
-                      <td className="px-4 py-2">{formatDuration(r.checkIn, r.checkOut)}</td>
+                      <td className="px-4 py-2">{formatMs(r.workedMs)}</td>
+                      <td className="px-4 py-2 text-amber-700">{formatMs(r.breakMs)}</td>
                       <td className="px-4 py-2 capitalize">{r.status}</td>
                       <td className="px-4 py-2 text-slate-500">{r.reason || "-"}</td>
+                      <td className="px-4 py-2">
+                        {(r.sessions?.length ? r.sessions : [{ checkInLocation: r.checkInLocation, checkOutLocation: r.checkOutLocation }]).map((session, index) => (
+                          <div key={index} className="mb-1">
+                            <AttendanceLocation label="IN" loc={session.checkInLocation} />
+                            <AttendanceLocation label="OUT" loc={session.checkOutLocation} />
+                          </div>
+                        ))}
+                        {!r.checkInLocation && !r.checkOutLocation && !(r.sessions || []).some((session) => session.checkInLocation || session.checkOutLocation) && (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -457,6 +486,38 @@ export default function HRAttendancePage() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+
+function AttendanceLocation({ label, loc }) {
+  if (!loc || typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
+
+  const displayParts = (loc.displayName || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const primary = loc.landmark || loc.placeName || loc.area || displayParts[0] || "Saved GPS location";
+  const structuredSecondary = [loc.area, loc.city, loc.district, loc.state]
+    .filter((v, i, arr) => v && arr.indexOf(v) === i)
+    .join(", ");
+  const secondary = structuredSecondary || displayParts.slice(1, 5).join(", ");
+
+  return (
+    <div className="text-xs leading-4 mb-1">
+      <span className="font-semibold text-slate-500 mr-1">{label}:</span>
+      <a
+        href={`https://www.google.com/maps?q=${loc.lat},${loc.lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline"
+        title={loc.displayName || `${loc.lat}, ${loc.lng}`}
+      >
+        📍 {primary}
+      </a>
+      {secondary && <p className="text-slate-500 ml-7">{secondary}</p>}
+      {loc.postcode && <p className="text-slate-400 ml-7">PIN: {loc.postcode}</p>}
     </div>
   );
 }

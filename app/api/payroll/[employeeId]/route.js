@@ -6,111 +6,169 @@ import Employee from "@/app/models/Employee";
 import Loan from "@/app/models/Loan";
 import Transaction from "@/app/models/Transaction";
 import { buildMonthCalendar } from "@/app/lib/attendanceCalendar";
+import {
+  applyLoanMonth,
+  calculateNetPayable,
+  compareMonths,
+  createLoanStates,
+  monthFromDate,
+  paidDaysFromSummary,
+  roundMoney,
+  salaryRateForMonth,
+  shiftMonth,
+  summarizeAttendance,
+  todayDateKey,
+} from "@/app/lib/payrollRules";
 
 function daysInMonth(monthStr) {
   const [y, m] = monthStr.split("-").map(Number);
   return new Date(y, m, 0).getDate();
 }
 
-function monthsBetween(startMonth, targetMonth) {
-  const [sy, sm] = startMonth.split("-").map(Number);
-  const [ty, tm] = targetMonth.split("-").map(Number);
-  return (ty - sy) * 12 + (tm - sm);
-}
-
-function prevMonth(monthStr) {
+function nextMonthStart(monthStr) {
   const [y, m] = monthStr.split("-").map(Number);
-  const d = new Date(y, m - 2, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return new Date(Date.UTC(y, m, 1));
 }
 
-// Computes one month's payroll, pulling forward any unpaid balance from the
-// previous month (capped recursion depth so it can never run away).
-async function computeMonthPayroll(employee, month, depth = 0) {
-  const totalDays = daysInMonth(month);
-  const days = await buildMonthCalendar(employee._id, month);
+function transactionMonth(txn) {
+  return new Date(txn.date).toISOString().slice(0, 7);
+}
 
-  let present = 0,
-    halfDay = 0,
-    leave = 0,
-    absent = 0,
-    holiday = 0,
-    weekOff = 0;
+function payrollStartMonth(employee, targetMonth, loans, transactions) {
+  const joinMonth = monthFromDate(employee.dateOfJoining);
+  if (joinMonth) return joinMonth;
 
-  for (const d of days) {
-    if (d.status === "present") present++;
-    else if (d.status === "half-day") halfDay++;
-    else if (d.status === "leave") leave++;
-    else if (d.status === "absent") absent++;
-    else if (d.status === "holiday") holiday++;
-    else if (d.status === "week-off") weekOff++;
+  const candidates = [
+    monthFromDate(employee.createdAt),
+    ...loans.map((l) => l.startMonth),
+    ...transactions.map((t) => transactionMonth(t)),
+  ].filter(Boolean);
+
+  if (candidates.length === 0) return targetMonth;
+  return candidates.reduce((min, value) => (compareMonths(value, min) < 0 ? value : min), candidates[0]);
+}
+
+async function computeMonthPayroll(employee, targetMonth) {
+  const targetEnd = nextMonthStart(targetMonth);
+  const [loans, transactions] = await Promise.all([
+    Loan.find({ employee: employee._id }).sort({ startMonth: 1, createdAt: 1 }),
+    Transaction.find({ employee: employee._id, date: { $lt: targetEnd } }).sort({ date: 1, createdAt: 1 }),
+  ]);
+
+  const startMonth = payrollStartMonth(employee, targetMonth, loans, transactions);
+  const transactionMap = new Map();
+  for (const txn of transactions) {
+    const m = transactionMonth(txn);
+    if (!transactionMap.has(m)) transactionMap.set(m, []);
+    transactionMap.get(m).push(txn);
   }
 
-  // Present, paid holidays, and paid weekly-offs count as full paid days; half-days count as 0.5
-  const paidDaysEquivalent = present + holiday + weekOff + halfDay * 0.5;
-  const dailyRate =
-    employee.wageType === "monthly" ? (employee.salary || 0) / totalDays : employee.salary || 0;
-  const grossEarnings = Math.round(dailyRate * paidDaysEquivalent * 100) / 100;
+  const loanStates = createLoanStates(loans);
 
-  const loans = await Loan.find({ employee: employee._id, status: "active" });
-  let loanDeduction = 0;
-  for (const loan of loans) {
-    const position = monthsBetween(loan.startMonth, month) + 1; // 1-indexed month of the loan term
-    if (position >= 1 && position <= loan.totalMonths) {
-      loanDeduction += loan.monthlyDeduction;
+  const currentMonth = todayDateKey().slice(0, 7);
+  const leaveMonth =
+    monthFromDate(employee.dateOfLeaving) ||
+    (employee.status === "inactive" ? monthFromDate(employee.updatedAt) : null);
+  let carryBalance = 0;
+  let result = null;
+  let month = startMonth;
+
+  // If user asks for a month before any known employment/payroll activity, return zero safely.
+  if (compareMonths(targetMonth, startMonth) < 0) {
+    const rate = salaryRateForMonth(employee, targetMonth);
+    return {
+      month: targetMonth,
+      totalDays: daysInMonth(targetMonth),
+      attendanceSummary: summarizeAttendance([]),
+      paidDaysEquivalent: 0,
+      salaryRate: rate.amount,
+      wageType: rate.wageType,
+      dailyRate: rate.wageType === "monthly" ? roundMoney(rate.amount / daysInMonth(targetMonth)) : roundMoney(rate.amount),
+      grossEarnings: 0,
+      bonus: 0,
+      loanDeduction: 0,
+      loanOutstanding: loanStates.reduce((sum, s) => roundMoney(sum + s.outstanding), 0),
+      salaryPaid: 0,
+      advance: 0,
+      previousBalance: 0,
+      netPayable: 0,
+    };
+  }
+
+  while (compareMonths(month, targetMonth) <= 0) {
+    const totalDays = daysInMonth(month);
+    const days = await buildMonthCalendar(employee._id, month);
+    const attendanceSummary = summarizeAttendance(days);
+    const paidDaysEquivalent = paidDaysFromSummary(attendanceSummary);
+    const rate = salaryRateForMonth(employee, month);
+    const dailyRate =
+      rate.wageType === "monthly"
+        ? roundMoney(rate.amount / totalDays)
+        : roundMoney(rate.amount);
+    const grossEarnings = roundMoney(dailyRate * paidDaysEquivalent);
+
+    const monthTxns = transactionMap.get(month) || [];
+    let bonus = 0;
+    let advance = 0;
+    let salaryPaid = 0;
+    let manualLoanCollection = 0;
+
+    // Future-dated transactions must not affect a running current-month payroll.
+    const today = todayDateKey();
+    for (const t of monthTxns) {
+      const txnDate = new Date(t.date).toISOString().slice(0, 10);
+      if (txnDate > today) continue;
+      const amount = Number(t.amount || 0);
+      if (t.type === "bonus") bonus += amount;
+      else if (t.type === "advance") advance += amount;
+      else if (t.type === "salary") salaryPaid += amount;
+      else if (t.type === "loan-collect") manualLoanCollection += amount;
     }
+
+    bonus = roundMoney(bonus);
+    advance = roundMoney(advance);
+    salaryPaid = roundMoney(salaryPaid);
+    manualLoanCollection = roundMoney(manualLoanCollection);
+
+    const autoEmiAllowed =
+      compareMonths(month, currentMonth) <= 0 && (!leaveMonth || compareMonths(month, leaveMonth) <= 0);
+    const loanResult = applyLoanMonth(loanStates, month, manualLoanCollection, autoEmiAllowed);
+    const loanDeduction = loanResult.deduction;
+    const loanOutstanding = loanResult.outstanding;
+
+    const previousBalance = roundMoney(carryBalance);
+    const netPayable = calculateNetPayable({
+      previousBalance,
+      grossEarnings,
+      bonus,
+      loanDeduction,
+      salaryPaid,
+      advance,
+    });
+
+    result = {
+      month,
+      totalDays,
+      attendanceSummary,
+      paidDaysEquivalent,
+      salaryRate: rate.amount,
+      wageType: rate.wageType,
+      dailyRate,
+      grossEarnings,
+      bonus,
+      loanDeduction,
+      loanOutstanding,
+      salaryPaid,
+      advance,
+      previousBalance,
+      netPayable,
+    };
+
+    carryBalance = netPayable;
+    month = shiftMonth(month, 1);
   }
 
-  const start = new Date(`${month}-01T00:00:00`);
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + 1);
-
-  const txns = await Transaction.find({
-    employee: employee._id,
-    date: { $gte: start, $lt: end },
-  });
-
-  let bonus = 0,
-    advance = 0,
-    salaryPaid = 0;
-  for (const t of txns) {
-    if (t.type === "bonus") bonus += t.amount;
-    else if (t.type === "advance") advance += t.amount;
-    else if (t.type === "salary") salaryPaid += t.amount;
-  }
-
-  // Pull forward unpaid balance from the previous month (max 12 months back)
-  let previousBalance = 0;
-  if (depth < 12) {
-    const prevM = prevMonth(month);
-    const joinMonth = employee.dateOfJoining
-      ? `${new Date(employee.dateOfJoining).getFullYear()}-${String(
-          new Date(employee.dateOfJoining).getMonth() + 1
-        ).padStart(2, "0")}`
-      : null;
-    if (!joinMonth || prevM >= joinMonth) {
-      const prevResult = await computeMonthPayroll(employee, prevM, depth + 1);
-      previousBalance = prevResult.netPayable;
-    }
-  }
-
-  const netPayable =
-    Math.round(
-      (previousBalance + grossEarnings + bonus - loanDeduction - salaryPaid - advance) * 100
-    ) / 100;
-
-  return {
-    month,
-    totalDays,
-    attendanceSummary: { present, halfDay, leave, absent, holiday, weekOff },
-    grossEarnings,
-    bonus,
-    loanDeduction,
-    salaryPaid,
-    advance,
-    previousBalance,
-    netPayable,
-  };
+  return result;
 }
 
 // GET /api/payroll/[employeeId]?month=YYYY-MM
@@ -123,16 +181,19 @@ export async function GET(req, { params }) {
 
     let { employeeId } = await params;
     if (session.user.role === "employee") {
-      employeeId = session.user.employeeId; // hard-locked to own record, URL param ignored
+      employeeId = session.user.employeeId;
     } else if (session.user.role !== "hr") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
-    const month = searchParams.get("month") || new Date().toISOString().slice(0, 7);
+    const month = searchParams.get("month") || todayDateKey().slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return NextResponse.json({ error: "Invalid month format" }, { status: 400 });
+    }
 
     await dbConnect();
-    const employee = await Employee.findById(employeeId).select("+salary");
+    const employee = await Employee.findById(employeeId).select("+salary +salaryHistory");
     if (!employee) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
 
     const payroll = await computeMonthPayroll(employee, month);

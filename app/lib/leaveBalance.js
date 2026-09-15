@@ -1,51 +1,104 @@
 import dbConnect from "./dbConnect";
 import Employee from "@/app/models/Employee";
 import LeaveRequest from "@/app/models/LeaveRequest";
+import Holiday from "@/app/models/Holiday";
+import Attendance from "@/app/models/Attendance";
+import { dateKeyFromDate, todayDateKey } from "@/app/lib/payrollRules";
 
-const ANNUAL_EARNED_QUOTA = 18; // days/year, accrues ~1.5/month
-const ANNUAL_PATERNITY_QUOTA = 5; // fixed days/year
+const ANNUAL_EARNED_QUOTA = 18;
+const ANNUAL_PATERNITY_QUOTA = 5;
 
-function daysInclusive(fromDate, toDate) {
-  const from = new Date(fromDate);
-  const to = new Date(toDate);
-  return Math.round((to - from) / 86400000) + 1;
+function* dateRange(fromDate, toDate) {
+  let cursor = new Date(`${fromDate}T00:00:00Z`);
+  const end = new Date(`${toDate}T00:00:00Z`);
+  while (cursor <= end) {
+    yield cursor.toISOString().slice(0, 10);
+    cursor = new Date(cursor.getTime() + 86400000);
+  }
 }
 
-function monthsBetween(a, b) {
-  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+function monthsInclusive(fromDate, toDate) {
+  const from = new Date(`${fromDate}T00:00:00Z`);
+  const to = new Date(`${toDate}T00:00:00Z`);
+  return Math.max(0, (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth()) + 1);
 }
 
-// Returns { earned: {available, consumed, accruedSoFar, annualQuota},
-//           paternity: {available, consumed, annualQuota},
-//           unpaid: {consumed} }
+async function workingDates(employeeId, fromDate, toDate) {
+  await dbConnect();
+  const employee = await Employee.findById(employeeId).select("dateOfJoining dateOfLeaving");
+  if (!employee) return [];
+
+  const join = dateKeyFromDate(employee.dateOfJoining);
+  const leave = dateKeyFromDate(employee.dateOfLeaving);
+  const start = join && fromDate < join ? join : fromDate;
+  const end = leave && toDate > leave ? leave : toDate;
+  if (start > end) return [];
+
+  const holidays = await Holiday.find({ date: { $gte: start, $lte: end } }).select("date");
+  const holidaySet = new Set(holidays.map((h) => h.date));
+  const result = [];
+  for (const date of dateRange(start, end)) {
+    const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
+    if (dow === 0 || holidaySet.has(date)) continue;
+    result.push(date);
+  }
+  return result;
+}
+
+export async function countLeaveWorkingDays(employeeId, fromDate, toDate) {
+  return (await workingDates(employeeId, fromDate, toDate)).length;
+}
+
 export async function computeLeaveBalance(employeeId) {
   await dbConnect();
-  const employee = await Employee.findById(employeeId).select("dateOfJoining");
-  const joinDate = employee?.dateOfJoining ? new Date(employee.dateOfJoining) : new Date();
+  const employee = await Employee.findById(employeeId).select("dateOfJoining dateOfLeaving");
+  const today = todayDateKey();
+  const currentYear = today.slice(0, 4);
+  const yearStart = `${currentYear}-01-01`;
+  const yearEnd = `${currentYear}-12-31`;
 
-  const now = new Date();
-  const yearStart = `${now.getFullYear()}-01-01`;
-  const yearEnd = `${now.getFullYear()}-12-31`;
+  const joinDate = dateKeyFromDate(employee?.dateOfJoining) || yearStart;
+  const leaveDate = dateKeyFromDate(employee?.dateOfLeaving);
+  const accrualStart = joinDate > yearStart ? joinDate : yearStart;
+  const accrualEnd = leaveDate && leaveDate < today ? leaveDate : today;
 
-  const approvedThisYear = await LeaveRequest.find({
-    employee: employeeId,
-    status: "approved",
-    fromDate: { $gte: yearStart, $lte: yearEnd },
-  });
+  const [approvedThisYear, attendanceRecords] = await Promise.all([
+    LeaveRequest.find({
+      employee: employeeId,
+      status: "approved",
+      fromDate: { $lte: yearEnd },
+      toDate: { $gte: yearStart },
+    }).sort({ createdAt: 1 }),
+    Attendance.find({
+      employee: employeeId,
+      date: { $gte: yearStart, $lte: yearEnd },
+    }).select("date status"),
+  ]);
+  const attendanceMap = new Map(attendanceRecords.map((r) => [r.date, r.status]));
 
   let consumedEarned = 0;
   let consumedPaternity = 0;
   let consumedUnpaid = 0;
+  const countedDates = new Set();
 
   for (const req of approvedThisYear) {
-    const days = daysInclusive(req.fromDate, req.toDate);
-    if (req.leaveType === "earned") consumedEarned += days;
-    else if (req.leaveType === "paternity") consumedPaternity += days;
-    else if (req.leaveType === "unpaid") consumedUnpaid += days;
+    const from = req.fromDate < yearStart ? yearStart : req.fromDate;
+    const to = req.toDate > yearEnd ? yearEnd : req.toDate;
+    const dates = await workingDates(employeeId, from, to);
+    for (const date of dates) {
+      if (countedDates.has(date)) continue;
+      // An approved leave only consumes balance while that day is actually
+      // recorded as leave. If the employee later works/punches, balance is restored.
+      if (attendanceMap.get(date) !== "leave") continue;
+      countedDates.add(date);
+      if (req.leaveType === "earned") consumedEarned++;
+      else if (req.leaveType === "paternity") consumedPaternity++;
+      else if (req.leaveType === "unpaid") consumedUnpaid++;
+    }
   }
 
-  const monthsWorked = Math.max(0, monthsBetween(joinDate, now)) + 1;
-  const accruedSoFar = Math.min(ANNUAL_EARNED_QUOTA, Math.round(monthsWorked * 1.5 * 10) / 10);
+  const monthsWorkedThisYear = accrualStart <= accrualEnd ? monthsInclusive(accrualStart, accrualEnd) : 0;
+  const accruedSoFar = Math.min(ANNUAL_EARNED_QUOTA, Math.round(monthsWorkedThisYear * 1.5 * 10) / 10);
 
   return {
     earned: {
@@ -59,8 +112,6 @@ export async function computeLeaveBalance(employeeId) {
       consumed: consumedPaternity,
       annualQuota: ANNUAL_PATERNITY_QUOTA,
     },
-    unpaid: {
-      consumed: consumedUnpaid,
-    },
+    unpaid: { consumed: consumedUnpaid },
   };
 }

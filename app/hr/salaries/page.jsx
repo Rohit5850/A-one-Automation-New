@@ -3,12 +3,31 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+function currentMonthStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function shiftMonth(monthStr, delta) {
+  const [y, m] = monthStr.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(monthStr) {
+  const [y, m] = monthStr.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("default", { month: "long", year: "numeric" });
+}
+
 export default function SalariesPage() {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [month, setMonth] = useState(currentMonthStr());
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [downloadError, setDownloadError] = useState("");
 
   function load() {
     fetch("/api/salaries")
@@ -38,16 +57,62 @@ export default function SalariesPage() {
     load();
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="font-semibold text-slate-900">Salaries</h1>
-        <Link href="/hr/dashboard" className="text-sm text-slate-500 hover:text-slate-800">
-          ← Back to Dashboard
-        </Link>
-      </header>
+  async function downloadSalarySlip(emp) {
+    setDownloadingId(emp._id);
+    setDownloadError("");
+    try {
+      const res = await fetch(`/api/payroll/${emp._id}?month=${month}`, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !data?.employee || !data?.payroll) {
+        throw new Error(data?.error || "Payroll data load nahi ho payi.");
+      }
+      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
+      await generateSalarySlipPdf(data.employee, data.payroll, month);
+    } catch (err) {
+      console.error("Salary slip download failed:", err);
+      setDownloadError(err?.message || "Salary slip download nahi ho payi.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
 
-      <main className="max-w-4xl mx-auto p-6">
+  return (
+    <div className="">
+      <div className="px-4 sm:px-6 pt-5 pb-3">
+        <h1 className="text-xl font-semibold text-slate-900">Salaries</h1>
+      </div>
+
+      <main className="max-w-5xl mx-auto p-6 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="text-sm font-medium text-slate-800">Salary Slip Month</p>
+            <p className="text-xs text-slate-500">Selected month ki slip har employee ke saamne download kar sakte hain.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMonth((m) => shiftMonth(m, -1))}
+              className="w-8 h-8 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600"
+            >
+              ‹
+            </button>
+            <span className="text-sm font-medium text-slate-800 w-40 text-center">
+              {monthLabel(month)}
+            </span>
+            <button
+              onClick={() => setMonth((m) => shiftMonth(m, 1))}
+              className="w-8 h-8 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        {downloadError && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+            {downloadError}
+          </p>
+        )}
+
         {loading ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : (
@@ -122,6 +187,13 @@ export default function SalariesPage() {
                           >
                             View Payroll
                           </Link>
+                          <button
+                            onClick={() => downloadSalarySlip(emp)}
+                            disabled={downloadingId === emp._id}
+                            className="text-[#5b4ff0] text-xs font-semibold hover:underline disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {downloadingId === emp._id ? "Preparing..." : "Download Slip"}
+                          </button>
                         </div>
                       )}
                     </td>

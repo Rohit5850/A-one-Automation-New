@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import PaymentRequest from "@/app/models/PaymentRequest";
+import { validateLoanTerms } from "@/app/lib/payrollRules";
 
 // GET /api/payment-requests
 //   - employee: own requests only
@@ -53,11 +54,15 @@ export async function POST(req) {
     if (!amount || Number(amount) <= 0) {
       return NextResponse.json({ error: "Valid amount is required" }, { status: 400 });
     }
-    if (type === "loan" && (!monthlyDeduction || !totalMonths)) {
-      return NextResponse.json(
-        { error: "Loan ke liye monthly deduction aur total months zaroori hain" },
-        { status: 400 }
-      );
+    if (type === "loan") {
+      if (!monthlyDeduction || !totalMonths) {
+        return NextResponse.json(
+          { error: "Loan ke liye monthly deduction aur total months zaroori hain" },
+          { status: 400 }
+        );
+      }
+      const termError = validateLoanTerms(amount, monthlyDeduction, Number(totalMonths));
+      if (termError) return NextResponse.json({ error: termError }, { status: 400 });
     }
 
     await dbConnect();

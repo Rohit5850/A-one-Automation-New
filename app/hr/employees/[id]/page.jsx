@@ -25,7 +25,8 @@ const STATUS_STYLES = {
 };
 
 function currentMonthStr() {
-  return new Date().toISOString().slice(0, 7);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function monthLabel(monthStr) {
@@ -43,17 +44,6 @@ function money(n) {
   return `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-function monthsBetween(startMonth, targetMonth) {
-  const [sy, sm] = startMonth.split("-").map(Number);
-  const [ty, tm] = targetMonth.split("-").map(Number);
-  return (ty - sy) * 12 + (tm - sm);
-}
-
-function loanOutstandingAsOf(loan, month) {
-  const position = monthsBetween(loan.startMonth, month) + 1;
-  const monthsPaid = Math.min(Math.max(position, 0), loan.totalMonths);
-  return Math.max(0, loan.amount - loan.monthlyDeduction * monthsPaid);
-}
 
 const TXN_TYPE_LABELS = {
   salary: "Salary",
@@ -116,8 +106,7 @@ export default function EmployeeDetailPage({ params }) {
   }
 
   const loans = payrollData?.loans || [];
-  const activeLoans = loans.filter((l) => l.status === "active");
-  const loanOutstanding = activeLoans.reduce((sum, l) => sum + loanOutstandingAsOf(l, month), 0);
+  const loanOutstanding = payrollData?.payroll?.loanOutstanding || 0;
 
   return (
     <div>
@@ -211,7 +200,6 @@ export default function EmployeeDetailPage({ params }) {
             payrollData={payrollData}
             loading={loadingPayroll}
             loanOutstanding={loanOutstanding}
-            activeLoans={activeLoans}
             month={month}
           />
         )}
@@ -257,9 +245,8 @@ export default function EmployeeDetailPage({ params }) {
 }
 
 // ---------- ATTENDANCE TAB ----------
-function effectiveHours(checkIn, checkOut) {
-  if (!checkIn || !checkOut) return null;
-  const ms = new Date(checkOut) - new Date(checkIn);
+function effectiveHours(checkIn, checkOut, workedMs = 0) {
+  const ms = workedMs > 0 ? workedMs : checkIn && checkOut ? new Date(checkOut) - new Date(checkIn) : 0;
   if (ms <= 0) return null;
   const hours = Math.floor(ms / 3600000);
   const minutes = Math.floor((ms % 3600000) / 60000);
@@ -279,14 +266,15 @@ function AttendanceTab({ payrollData, loading }) {
     ["Present (P)", summary.present || 0, "text-emerald-700"],
     ["Absent (A)", summary.absent || 0, "text-red-700"],
     ["Half Day (HD)", summary.halfDay || 0, "text-amber-700"],
-    ["Leave (L)", summary.leave || 0, "text-blue-700"],
+    ["Paid Leave", summary.paidLeave || 0, "text-blue-700"],
+    ["Unpaid Leave", summary.unpaidLeave || 0, "text-cyan-700"],
     ["Holiday", summary.holiday || 0, "text-purple-700"],
     ["Week Off", summary.weekOff || 0, "text-slate-500"],
   ];
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {stats.map(([label, val, color]) => (
           <div key={label} className="bg-white border border-slate-200 rounded-lg p-3 text-center">
             <p className={`text-xl font-semibold ${color}`}>{val}</p>
@@ -312,7 +300,7 @@ function AttendanceTab({ payrollData, loading }) {
 
         {days.map((d) => {
           const isOff = d.status === "week-off" || d.status === "holiday";
-          const eff = effectiveHours(d.checkIn, d.checkOut);
+          const eff = effectiveHours(d.checkIn, d.checkOut, d.workedMs);
 
           if (isOff) {
             return (
@@ -424,7 +412,8 @@ function PayrollTab({ payrollData, loading, loanOutstanding, month }) {
 
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Earnings</p>
-          <Row label={`Present / Paid Days`} value={money(p.grossEarnings)} />
+          <Row label="Paid Days" value={`${p.paidDaysEquivalent || 0} days`} />
+          <Row label="Attendance Earnings" value={money(p.grossEarnings)} />
           {p.bonus > 0 && <Row label="Bonus" value={money(p.bonus)} />}
           <Row label="Gross Earnings" value={money(p.grossEarnings + p.bonus)} bold />
         </div>
@@ -621,7 +610,10 @@ function DetailRow({ label, value }) {
 function MakePaymentModal({ employeeId, month, onClose, onSaved }) {
   const [type, setType] = useState("salary");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [mode, setMode] = useState("cash");
   const [remarks, setRemarks] = useState("");
   const [error, setError] = useState("");

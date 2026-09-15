@@ -46,6 +46,30 @@ function AllEmployeesInner() {
     load();
   }, []);
 
+  async function toggleEmployeeLocation(emp) {
+    const nextValue = !emp.showLocationToEmployee;
+    setEmployees((current) =>
+      current.map((item) =>
+        item._id === emp._id ? { ...item, showLocationToEmployee: nextValue } : item
+      )
+    );
+
+    const res = await fetch(`/api/employees/${emp._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showLocationToEmployee: nextValue }),
+    });
+
+    if (!res.ok) {
+      setEmployees((current) =>
+        current.map((item) =>
+          item._id === emp._id ? { ...item, showLocationToEmployee: !nextValue } : item
+        )
+      );
+      alert("Location visibility update nahi ho payi. Dubara try karein.");
+    }
+  }
+
   async function handleDelete(emp) {
     setOpenMenuId(null);
     if (
@@ -165,6 +189,29 @@ function AllEmployeesInner() {
                   </p>
                 </div>
               </Link>
+
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-medium text-slate-700">Employee Location View</p>
+                  <p className="text-[11px] text-slate-400">Attendance history location</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleEmployeeLocation(emp)}
+                  role="switch"
+                  aria-checked={!!emp.showLocationToEmployee}
+                  title={emp.showLocationToEmployee ? "Employee location dekh sakta hai" : "Employee location nahi dekh sakta"}
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+                    emp.showLocationToEmployee ? "bg-emerald-500" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      emp.showLocationToEmployee ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           ))}
           {filtered.length === 0 && (

@@ -26,7 +26,19 @@ const EmployeeSchema = new mongoose.Schema(
     photoUrl: { type: String, trim: true }, // optional, for the employee card
     bloodGroup: { type: String, trim: true },
     emergencyContact: { type: String, trim: true },
-    salary: { type: Number, select: false }, // sensitive: excluded unless explicitly selected
+    salary: { type: Number, min: 0, select: false }, // current salary/rate; sensitive
+    salaryHistory: {
+      type: [
+        {
+          amount: { type: Number, required: true, min: 0 },
+          wageType: { type: String, enum: ["daily", "monthly"], required: true },
+          effectiveMonth: { type: String, required: true }, // YYYY-MM
+          changedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+      select: false,
+    },
     status: {
       type: String,
       enum: ["active", "inactive"],
@@ -35,6 +47,10 @@ const EmployeeSchema = new mongoose.Schema(
     fieldWorker: {
       type: Boolean,
       default: false, // if true, GPS location is captured/required on check-in and check-out
+    },
+    showLocationToEmployee: {
+      type: Boolean,
+      default: false, // HR controls whether this employee can see saved attendance locations
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
