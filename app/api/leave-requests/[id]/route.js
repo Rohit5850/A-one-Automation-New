@@ -7,6 +7,7 @@ import Attendance from "@/app/models/Attendance";
 import Holiday from "@/app/models/Holiday";
 import Employee from "@/app/models/Employee";
 import { dateKeyFromDate } from "@/app/lib/payrollRules";
+import { computeLeaveBalance, countLeaveWorkingDays } from "@/app/lib/leaveBalance";
 
 function* dateRange(fromDate, toDate) {
   let d = new Date(`${fromDate}T00:00:00Z`);
@@ -37,6 +38,14 @@ export async function PATCH(req, { params }) {
     if (!request) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (request.status !== "pending") {
       return NextResponse.json({ error: "Ye leave request already review ho chuki hai" }, { status: 400 });
+    }
+
+    if (status === "approved" && request.leaveType === "comp-off") {
+      const balance = await computeLeaveBalance(request.employee);
+      const needed = await countLeaveWorkingDays(request.employee, request.fromDate, request.toDate);
+      if (needed > Number(balance.compOff?.available || 0)) {
+        return NextResponse.json({ error: `C-Off balance sirf ${balance.compOff?.available || 0} day available hai` }, { status: 400 });
+      }
     }
 
     request.status = status;
@@ -72,7 +81,7 @@ export async function PATCH(req, { params }) {
               employee: request.employee,
               date,
               status: "leave",
-              reason: `${request.leaveType} leave${request.note ? ` - ${request.note}` : ""}`,
+              reason: request.leaveType === "comp-off" ? `C-OFF${request.note ? ` - ${request.note}` : ""}` : `${request.leaveType} leave${request.note ? ` - ${request.note}` : ""}`,
             },
           },
           { upsert: true, new: true }

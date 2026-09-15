@@ -7,7 +7,7 @@ const LeaveRequestSchema = new mongoose.Schema(
     toDate: { type: String, required: true }, // "YYYY-MM-DD"
     leaveType: {
       type: String,
-      enum: ["earned", "paternity", "unpaid"],
+      enum: ["earned", "paternity", "comp-off", "unpaid"],
       required: true,
     },
     note: { type: String, trim: true },

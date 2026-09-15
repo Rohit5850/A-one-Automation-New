@@ -15,7 +15,7 @@ export default function EmployeeDashboard() {
   }, []);
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-6">
       <p className="text-xs font-medium text-slate-400 tracking-wide uppercase">Home</p>
       <h1 className="text-xl font-semibold text-slate-900">
         Welcome{employee ? `, ${employee.fullName.split(" ")[0]}` : ""}

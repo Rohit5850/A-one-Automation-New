@@ -3,6 +3,7 @@
 import { useEffect, useState, use, useCallback } from "react";
 import Link from "next/link";
 import EmployeeCard from "@/app/Components/EmployeeCard";
+import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
 
 const TABS = ["Attendance", "Payroll", "Transactions", "Details"];
 
@@ -25,8 +26,11 @@ const STATUS_STYLES = {
 };
 
 function currentMonthStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}`;
 }
 
 function monthLabel(monthStr) {
@@ -125,7 +129,7 @@ export default function EmployeeDetailPage({ params }) {
           <div className="relative flex gap-2">
             <button
               onClick={() => setShowPaymentModal(true)}
-              className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800"
+              className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800"
             >
               Make Payment
             </button>
@@ -175,7 +179,7 @@ export default function EmployeeDetailPage({ params }) {
           <div className="flex items-center justify-center sm:justify-end gap-3">
             <button
               onClick={() => setMonth((m) => shiftMonth(m, -1))}
-              className="w-8 h-8 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600"
+              className="w-8 h-8 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm bg-white hover:bg-slate-50 text-slate-600"
             >
               ‹
             </button>
@@ -184,7 +188,7 @@ export default function EmployeeDetailPage({ params }) {
             </span>
             <button
               onClick={() => setMonth((m) => shiftMonth(m, 1))}
-              className="w-8 h-8 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600"
+              className="w-8 h-8 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm bg-white hover:bg-slate-50 text-slate-600"
             >
               ›
             </button>
@@ -276,14 +280,14 @@ function AttendanceTab({ payrollData, loading }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {stats.map(([label, val, color]) => (
-          <div key={label} className="bg-white border border-slate-200 rounded-lg p-3 text-center">
+          <div key={label} className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-3 text-center">
             <p className={`text-xl font-semibold ${color}`}>{val}</p>
             <p className="text-xs text-slate-500">{label}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
         <div className="grid grid-cols-[110px_1fr_100px_100px_90px] px-4 py-2 bg-slate-100 text-slate-500 text-xs font-medium uppercase tracking-wide">
           <span>Date</span>
           <span>Attendance</span>
@@ -306,10 +310,10 @@ function AttendanceTab({ payrollData, loading }) {
             return (
               <div
                 key={d.date}
-                className="grid grid-cols-[110px_1fr] px-4 py-3 border-t border-slate-100 bg-slate-50/70 items-center"
+                className="grid grid-cols-[110px_1fr] px-4 py-3 border-t border-slate-100/80 bg-slate-50/70 items-center"
               >
                 <span className="text-sm text-slate-700">
-                  {weekdayShort(d.date)}, {d.date.slice(8, 10)} {monthShort(d.date)}
+                  {formatDateDMY(d.date)}
                 </span>
                 <span className="text-xs font-medium text-slate-500 bg-slate-200 rounded px-2 py-0.5 w-fit">
                   {d.status === "holiday" ? `Holiday${d.reason ? ` - ${d.reason}` : ""}` : "Full day Weekly-off"}
@@ -321,10 +325,10 @@ function AttendanceTab({ payrollData, loading }) {
           return (
             <div
               key={d.date}
-              className="grid grid-cols-[110px_1fr_100px_100px_90px] px-4 py-3 border-t border-slate-100 items-center"
+              className="grid grid-cols-[110px_1fr_100px_100px_90px] px-4 py-3 border-t border-slate-100/80 items-center"
             >
               <span className="text-sm text-slate-700">
-                {weekdayShort(d.date)}, {d.date.slice(8, 10)} {monthShort(d.date)}
+                {formatDateDMY(d.date)}
               </span>
               <div className="pr-4">
                 <div className="h-2 rounded-full bg-slate-100 overflow-hidden w-full max-w-[240px]">
@@ -339,11 +343,11 @@ function AttendanceTab({ payrollData, loading }) {
               </div>
               <span className="text-sm text-slate-700">{eff || "-"}</span>
               <span className="text-sm text-slate-700">
-                {d.checkIn ? new Date(d.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+                {d.checkIn ? formatTime24(d.checkIn) : "-"}
                 <LocationLink loc={d.checkInLocation} />
               </span>
               <span className="text-sm text-slate-700">
-                {d.checkOut ? new Date(d.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}
+                {d.checkOut ? formatTime24(d.checkOut) : "-"}
                 <LocationLink loc={d.checkOutLocation} />
               </span>
             </div>
@@ -407,7 +411,7 @@ function PayrollTab({ payrollData, loading, loanOutstanding, month }) {
         <StatCard label="Loan Outstanding" value={money(loanOutstanding)} />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 max-w-xl">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-4 max-w-xl">
         <p className="text-sm font-medium text-slate-700">{monthLabel(month)}</p>
 
         <div>
@@ -415,7 +419,8 @@ function PayrollTab({ payrollData, loading, loanOutstanding, month }) {
           <Row label="Paid Days" value={`${p.paidDaysEquivalent || 0} days`} />
           <Row label="Attendance Earnings" value={money(p.grossEarnings)} />
           {p.bonus > 0 && <Row label="Bonus" value={money(p.bonus)} />}
-          <Row label="Gross Earnings" value={money(p.grossEarnings + p.bonus)} bold />
+          {p.overtimePay > 0 && <Row label={`Overtime Pay (${p.overtimeHours || 0} hrs)`} value={money(p.overtimePay)} />}
+          <Row label="Gross Earnings" value={money(p.grossEarnings + p.bonus + (p.overtimePay || 0))} bold />
         </div>
 
         <div>
@@ -441,7 +446,7 @@ function PayrollTab({ payrollData, loading, loanOutstanding, month }) {
 
 function StatCard({ label, value }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4">
+    <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-4">
       <p className="text-xs text-slate-500">{label}</p>
       <p className="text-lg font-semibold text-slate-900">{value}</p>
     </div>
@@ -462,12 +467,12 @@ function Row({ label, value, bold, big }) {
 // ---------- TRANSACTIONS TAB ----------
 function TransactionsTab({ transactions, txnTypeFilter, setTxnTypeFilter }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
       <div className="px-4 py-3 border-b border-slate-200 flex justify-end">
         <select
           value={txnTypeFilter}
           onChange={(e) => setTxnTypeFilter(e.target.value)}
-          className="text-sm border border-slate-300 rounded-md px-2 py-1"
+          className="text-sm border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1"
         >
           <option value="all">All Types</option>
           <option value="salary">Salary</option>
@@ -476,8 +481,8 @@ function TransactionsTab({ transactions, txnTypeFilter, setTxnTypeFilter }) {
           <option value="loan-collect">Loan Collect</option>
         </select>
       </div>
-      <table className="w-full text-sm">
-        <thead className="bg-slate-100 text-slate-600 text-left">
+      <table className="w-full min-w-[680px] text-sm">
+        <thead className="bg-slate-50/80 text-slate-600 text-left">
           <tr>
             <th className="px-4 py-2">Date</th>
             <th className="px-4 py-2">Type</th>
@@ -495,8 +500,8 @@ function TransactionsTab({ transactions, txnTypeFilter, setTxnTypeFilter }) {
             </tr>
           )}
           {transactions.map((t) => (
-            <tr key={t._id} className="border-t border-slate-100">
-              <td className="px-4 py-2">{new Date(t.date).toLocaleDateString()}</td>
+            <tr key={t._id} className="border-t border-slate-100/80">
+              <td className="px-4 py-2">{formatDateDMY(t.date)}</td>
               <td className="px-4 py-2">{TXN_TYPE_LABELS[t.type] || t.type}</td>
               <td className="px-4 py-2">{money(t.amount)}</td>
               <td className="px-4 py-2 capitalize">{t.mode}</td>
@@ -520,7 +525,7 @@ function DetailsTab({ employee, payroll, month }) {
     setSending(true);
     setMessage("");
     try {
-      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
+      const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
       await generateSalarySlipPdf(employee, payroll, month);
     } catch (err) {
       console.error(err);
@@ -543,7 +548,7 @@ function DetailsTab({ employee, payroll, month }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-2">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-2">
         <p className="text-sm font-semibold text-slate-800 mb-2">Employee Detail</p>
         <DetailRow label="Staff Name" value={employee.fullName} />
         <DetailRow label="Mobile Number" value={employee.phone} />
@@ -551,15 +556,15 @@ function DetailsTab({ employee, payroll, month }) {
         <DetailRow label="Gender" value={employee.gender} />
         <DetailRow
           label="Date of Joining"
-          value={employee.dateOfJoining ? new Date(employee.dateOfJoining).toLocaleDateString() : "-"}
+          value={employee.dateOfJoining ? formatDateDMY(employee.dateOfJoining) : "-"}
         />
         <DetailRow
           label="Date of Leaving"
-          value={employee.dateOfLeaving ? new Date(employee.dateOfLeaving).toLocaleDateString() : "-"}
+          value={employee.dateOfLeaving ? formatDateDMY(employee.dateOfLeaving) : "-"}
         />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-2">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-2">
         <p className="text-sm font-semibold text-slate-800 mb-2">Salary Detail</p>
         <DetailRow label="Salary" value={`₹${employee.salary ?? "-"}`} />
         <DetailRow label="Salary Type" value={employee.wageType === "daily" ? "Daily Wage" : "Monthly"} />
@@ -568,14 +573,14 @@ function DetailsTab({ employee, payroll, month }) {
           value={employee.wageType === "daily" ? "Paid per day worked" : "1st to last day, every month"}
         />
 
-        <div className="pt-4 border-t border-slate-100 space-y-2">
+        <div className="pt-4 border-t border-slate-100/80 space-y-2">
           <p className="text-xs font-semibold text-slate-400 uppercase">Salary Slip</p>
           {message && <p className="text-xs text-red-600">{message}</p>}
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={handleDownloadSlip}
               disabled={sending}
-              className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
+              className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
             >
               Download PDF
             </button>
@@ -649,7 +654,7 @@ function MakePaymentModal({ employeeId, month, onClose, onSaved }) {
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           >
             <option value="salary">Salary</option>
             <option value="bonus">Bonus</option>
@@ -663,7 +668,7 @@ function MakePaymentModal({ employeeId, month, onClose, onSaved }) {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           />
         </Field>
 
@@ -673,14 +678,14 @@ function MakePaymentModal({ employeeId, month, onClose, onSaved }) {
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
             />
           </Field>
           <Field label="Mode" className="w-32">
             <select
               value={mode}
               onChange={(e) => setMode(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
             >
               <option value="cash">Cash</option>
               <option value="online">Online</option>
@@ -693,7 +698,7 @@ function MakePaymentModal({ employeeId, month, onClose, onSaved }) {
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             rows={2}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           />
         </Field>
       </div>
@@ -751,7 +756,7 @@ function GiveLoanModal({ employeeId, month, onClose, onSaved }) {
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           />
         </Field>
 
@@ -761,7 +766,7 @@ function GiveLoanModal({ employeeId, month, onClose, onSaved }) {
               type="number"
               value={monthlyDeduction}
               onChange={(e) => setMonthlyDeduction(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
             />
           </Field>
           <Field label="Total Months" className="flex-1">
@@ -769,7 +774,7 @@ function GiveLoanModal({ employeeId, month, onClose, onSaved }) {
               type="number"
               value={totalMonths}
               onChange={(e) => setTotalMonths(e.target.value)}
-              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
             />
           </Field>
         </div>
@@ -779,7 +784,7 @@ function GiveLoanModal({ employeeId, month, onClose, onSaved }) {
             type="month"
             value={startMonth}
             onChange={(e) => setStartMonth(e.target.value)}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           />
         </Field>
 
@@ -788,7 +793,7 @@ function GiveLoanModal({ employeeId, month, onClose, onSaved }) {
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             rows={2}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           />
         </Field>
 
@@ -834,14 +839,14 @@ function ModalFooter({ onCancel, onSave, saving }) {
     <div className="flex justify-end gap-2 pt-2">
       <button
         onClick={onCancel}
-        className="text-sm px-4 py-2 rounded-md border border-slate-300 hover:bg-slate-50"
+        className="text-sm px-4 py-2 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm hover:bg-slate-50"
       >
         Cancel
       </button>
       <button
         onClick={onSave}
         disabled={saving}
-        className="text-sm px-4 py-2 rounded-md bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-60"
+        className="text-sm px-4 py-2 rounded-md bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 hover:bg-slate-800 disabled:opacity-60"
       >
         {saving ? "Saving..." : "Save"}
       </button>

@@ -14,15 +14,15 @@ export default function HRDashboard() {
   }, []);
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-6">
       <p className="text-xs font-medium text-slate-400 tracking-wide uppercase">Summary</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5">
           <p className="font-medium text-slate-900 mb-3">Who is on leave today</p>
           {!summary ? (
             <p className="text-sm text-slate-400">Loading...</p>
-          ) : (summary.onLeaveToday ?? []).length === 0 ? (
+          ) : summary.onLeaveToday.length === 0 ? (
             <div className="bg-amber-50 border border-amber-100 text-amber-800 text-sm rounded-md px-3 py-2">
               No employee is on leave today.
             </div>
@@ -37,11 +37,11 @@ export default function HRDashboard() {
           )}
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5">
           <p className="font-medium text-slate-900 mb-3">Not checked in yet today</p>
           {!summary ? (
             <p className="text-sm text-slate-400">Loading...</p>
-          ) : (summary.notCheckedIn ?? []).length === 0 ? (
+          ) : summary.notCheckedIn.length === 0 ? (
             <p className="text-sm text-slate-500">Everyone has checked in.</p>
           ) : (
             <div className="flex flex-wrap gap-4">
@@ -107,8 +107,20 @@ export default function HRDashboard() {
           Mark Attendance
         </Link>
         <Link
+          href="/hr/leave-requests"
+          className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+        >
+          Leave Requests
+        </Link>
+        <Link
+          href="/hr/payment-requests"
+          className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+        >
+          Loan / Advance Requests
+        </Link>
+        <Link
           href="/hr/employees/new"
-          className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800"
+          className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800"
         >
           + Add Employee
         </Link>

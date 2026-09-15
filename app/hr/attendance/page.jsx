@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
 import Link from "next/link";
 import EmployeeCard from "@/app/Components/EmployeeCard";
 
@@ -23,7 +24,15 @@ function formatMs(ms) {
 // Converts a Date's local time into the "HH:MM" value <input type="time"> needs
 function toTimeInputValue(dateVal) {
   if (!dateVal) return "";
-  return new Date(dateVal).toTimeString().slice(0, 5);
+  return formatTime24(dateVal);
+}
+
+function indiaDateKey(value = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(value);
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 export default function HRAttendancePage() {
@@ -35,14 +44,14 @@ export default function HRAttendancePage() {
   const [message, setMessage] = useState("");
 
   // Manual entry state
-  const [manualDate, setManualDate] = useState(new Date().toISOString().slice(0, 10));
+  const [manualDate, setManualDate] = useState(indiaDateKey());
   const [manualCheckIn, setManualCheckIn] = useState("");
   const [manualCheckOut, setManualCheckOut] = useState("");
   const [manualSaving, setManualSaving] = useState(false);
   const [manualMessage, setManualMessage] = useState("");
 
   // Leave / half-day / absent marking state
-  const [leaveDate, setLeaveDate] = useState(new Date().toISOString().slice(0, 10));
+  const [leaveDate, setLeaveDate] = useState(indiaDateKey());
   const [leaveStatus, setLeaveStatus] = useState("leave");
   const [leaveReason, setLeaveReason] = useState("");
   const [leaveSaving, setLeaveSaving] = useState(false);
@@ -71,11 +80,11 @@ export default function HRAttendancePage() {
   function selectEmployee(emp) {
     setEmployee(emp);
     setMessage("");
-    setManualDate(new Date().toISOString().slice(0, 10));
+    setManualDate(indiaDateKey());
     setManualCheckIn("");
     setManualCheckOut("");
     setManualMessage("");
-    setLeaveDate(new Date().toISOString().slice(0, 10));
+    setLeaveDate(indiaDateKey());
     setLeaveStatus("leave");
     setLeaveReason("");
     setLeaveMessage("");
@@ -99,6 +108,11 @@ export default function HRAttendancePage() {
 
   async function handleManualSave() {
     if (!employee) return;
+    const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if ((manualCheckIn && !hhmm.test(manualCheckIn)) || (manualCheckOut && !hhmm.test(manualCheckOut))) {
+      setManualMessage("Time 24-hour HH:MM format me enter karein, e.g. 18:30");
+      return;
+    }
     setManualSaving(true);
     setManualMessage("");
     const res = await fetch("/api/attendance/manual", {
@@ -113,7 +127,7 @@ export default function HRAttendancePage() {
     });
     setManualSaving(false);
     if (res.ok) {
-      setManualMessage(`${manualDate} ka time save ho gaya.`);
+      setManualMessage(`${formatDateDMY(manualDate)} ka time save ho gaya.`);
       loadHistory(employee._id);
     } else {
       const data = await res.json().catch(() => ({}));
@@ -121,7 +135,7 @@ export default function HRAttendancePage() {
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDateKey();
   const todayRecord = records.find((r) => r.date === today);
   const todaySessions = todayRecord?.sessions?.length
     ? todayRecord.sessions
@@ -141,7 +155,7 @@ export default function HRAttendancePage() {
     });
     setMarking(false);
     if (res.ok) {
-      setMessage(`Check-in note ho gaya - ${new Date().toLocaleTimeString()}`);
+      setMessage(`Check-in note ho gaya - ${formatTime24(new Date(), true)}`);
       loadHistory(employee._id);
     } else {
       const data = await res.json().catch(() => ({}));
@@ -160,7 +174,7 @@ export default function HRAttendancePage() {
     });
     setMarking(false);
     if (res.ok) {
-      setMessage(`Check-out note ho gaya - ${new Date().toLocaleTimeString()}`);
+      setMessage(`Check-out note ho gaya - ${formatTime24(new Date(), true)}`);
       loadHistory(employee._id);
     } else {
       const data = await res.json().catch(() => ({}));
@@ -199,7 +213,7 @@ export default function HRAttendancePage() {
     });
     setLeaveSaving(false);
     if (res.ok) {
-      setLeaveMessage(`${leaveDate} ko "${leaveStatus}" mark ho gaya.`);
+      setLeaveMessage(`${formatDateDMY(leaveDate)} ko "${leaveStatus}" mark ho gaya.`);
       setLeaveReason("");
       loadHistory(employee._id);
     } else {
@@ -228,7 +242,7 @@ export default function HRAttendancePage() {
               placeholder="Naam ya Employee ID se filter karein..."
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             />
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -236,7 +250,7 @@ export default function HRAttendancePage() {
                 <button
                   key={emp._id}
                   onClick={() => selectEmployee(emp)}
-                  className="bg-white border border-slate-200 rounded-lg p-3 text-left hover:border-slate-400 hover:shadow-sm transition"
+                  className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-3 text-left hover:border-slate-400 hover:shadow-sm transition"
                 >
                   <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-semibold mb-2">
                     {emp.fullName
@@ -268,17 +282,17 @@ export default function HRAttendancePage() {
 
             <EmployeeCard employee={employee} />
 
-            <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-3">
+            <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-3">
               <p className="text-sm text-slate-600">Aaj: {today}</p>
               {message && <p className="text-sm text-emerald-600">{message}</p>}
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={handleCheckIn}
                   disabled={marking || !!activeSession}
-                  className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-50"
+                  className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-50"
                 >
                   {activeSession
-                    ? `Checked In (${new Date(activeSession.checkIn).toLocaleTimeString()})`
+                    ? `Checked In (${formatTime24(activeSession.checkIn)})`
                     : "Check In"}
                 </button>
                 <button
@@ -302,7 +316,7 @@ export default function HRAttendancePage() {
                 </button>
               </div>
 
-              <div className="pt-4 mt-2 border-t border-slate-100 space-y-3">
+              <div className="pt-4 mt-2 border-t border-slate-100/80 space-y-3">
                 <p className="text-sm font-medium text-slate-700">Manual Entry (kisi bhi date ke liye)</p>
                 {manualMessage && <p className="text-sm text-emerald-600">{manualMessage}</p>}
                 <div className="flex gap-3 flex-wrap items-end">
@@ -313,7 +327,7 @@ export default function HRAttendancePage() {
                       value={manualDate}
                       max={today}
                       onChange={(e) => setManualDate(e.target.value)}
-                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     />
                   </div>
 
@@ -323,12 +337,12 @@ export default function HRAttendancePage() {
                       <select
                         value={existingDates.includes(manualDate) ? manualDate : ""}
                         onChange={(e) => e.target.value && setManualDate(e.target.value)}
-                        className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                        className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                       >
                         <option value="">-- Date select karein --</option>
                         {existingDates.map((d) => (
                           <option key={d} value={d}>
-                            {d}
+                            {formatDateDMY(d)}
                           </option>
                         ))}
                       </select>
@@ -338,34 +352,40 @@ export default function HRAttendancePage() {
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500">Check-in Time</label>
                     <input
-                      type="time"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="HH:MM (24-hour)"
+                      maxLength={5}
                       value={manualCheckIn}
                       onChange={(e) => setManualCheckIn(e.target.value)}
-                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500">Check-out Time</label>
                     <input
-                      type="time"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="HH:MM (24-hour)"
+                      maxLength={5}
                       value={manualCheckOut}
                       onChange={(e) => setManualCheckOut(e.target.value)}
-                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     />
                   </div>
 
                   <button
                     onClick={handleManualSave}
                     disabled={manualSaving}
-                    className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
+                    className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
                   >
                     {manualSaving ? "Saving..." : "Save Time"}
                   </button>
                 </div>
               </div>
 
-              <div className="pt-4 mt-2 border-t border-slate-100 space-y-3">
+              <div className="pt-4 mt-2 border-t border-slate-100/80 space-y-3">
                 <p className="text-sm font-medium text-slate-700">
                   Mark Leave / Half-day / Absent
                 </p>
@@ -385,7 +405,7 @@ export default function HRAttendancePage() {
                       type="date"
                       value={leaveDate}
                       onChange={(e) => setLeaveDate(e.target.value)}
-                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     />
                   </div>
 
@@ -394,7 +414,7 @@ export default function HRAttendancePage() {
                     <select
                       value={leaveStatus}
                       onChange={(e) => setLeaveStatus(e.target.value)}
-                      className="border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     >
                       <option value="leave">Leave</option>
                       <option value="half-day">Half Day</option>
@@ -410,14 +430,14 @@ export default function HRAttendancePage() {
                       placeholder="e.g. Sick leave, Personal work..."
                       value={leaveReason}
                       onChange={(e) => setLeaveReason(e.target.value)}
-                      className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                      className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     />
                   </div>
 
                   <button
                     onClick={handleLeaveSave}
                     disabled={leaveSaving}
-                    className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
+                    className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
                   >
                     {leaveSaving ? "Saving..." : "Save Status"}
                   </button>
@@ -425,12 +445,12 @@ export default function HRAttendancePage() {
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
               <div className="px-5 py-3 border-b border-slate-200 font-medium text-slate-800 text-sm">
                 Attendance History
               </div>
-              <table className="w-full text-sm">
-                <thead className="bg-slate-100 text-slate-600 text-left">
+              <table className="w-full min-w-[680px] text-sm">
+                <thead className="bg-slate-50/80 text-slate-600 text-left">
                   <tr>
                     <th className="px-4 py-2">Date</th>
                     <th className="px-4 py-2">Check-in Time</th>
@@ -451,21 +471,21 @@ export default function HRAttendancePage() {
                     </tr>
                   )}
                   {records.map((r) => (
-                    <tr key={r._id} className="border-t border-slate-100">
-                      <td className="px-4 py-2">{r.date}</td>
+                    <tr key={r._id} className="border-t border-slate-100/80">
+                      <td className="px-4 py-2">{formatDateDMY(r.date)}</td>
                       <td className="px-4 py-2">
                         {(r.sessions?.length ? r.sessions : [{ checkIn: r.checkIn }]).map((session, i) => (
-                          <div key={i}>{session.checkIn ? new Date(session.checkIn).toLocaleTimeString() : "-"}</div>
+                          <div key={i}>{session.checkIn ? formatTime24(session.checkIn) : "-"}</div>
                         ))}
                       </td>
                       <td className="px-4 py-2">
                         {(r.sessions?.length ? r.sessions : [{ checkOut: r.checkOut }]).map((session, i) => (
-                          <div key={i}>{session.checkOut ? new Date(session.checkOut).toLocaleTimeString() : "Working"}</div>
+                          <div key={i}>{session.checkOut ? formatTime24(session.checkOut) : "Working"}</div>
                         ))}
                       </td>
                       <td className="px-4 py-2">{formatMs(r.workedMs)}</td>
                       <td className="px-4 py-2 text-amber-700">{formatMs(r.breakMs)}</td>
-                      <td className="px-4 py-2 capitalize">{r.status}</td>
+                      <td className="px-4 py-2 capitalize">{r.status === "leave" && String(r.reason || "").startsWith("C-OFF") ? "C-OFF" : r.status}</td>
                       <td className="px-4 py-2 text-slate-500">{r.reason || "-"}</td>
                       <td className="px-4 py-2">
                         {(r.sessions?.length ? r.sessions : [{ checkInLocation: r.checkInLocation, checkOutLocation: r.checkOutLocation }]).map((session, index) => (

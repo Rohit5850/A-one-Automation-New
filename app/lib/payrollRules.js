@@ -44,7 +44,7 @@ export function monthsBetween(startMonth, targetMonth) {
 }
 
 export function isPaidLeaveType(type) {
-  return type === "earned" || type === "paternity";
+  return type === "earned" || type === "paternity" || type === "comp-off";
 }
 
 export function expectedLoanMonths(amount, monthlyDeduction) {
@@ -172,6 +172,7 @@ export function calculateNetPayable({
   previousBalance = 0,
   grossEarnings = 0,
   bonus = 0,
+  overtimePay = 0,
   loanDeduction = 0,
   salaryPaid = 0,
   advance = 0,
@@ -179,7 +180,8 @@ export function calculateNetPayable({
   return roundMoney(
     Number(previousBalance || 0) +
       Number(grossEarnings || 0) +
-      Number(bonus || 0) -
+      Number(bonus || 0) +
+      Number(overtimePay || 0) -
       Number(loanDeduction || 0) -
       Number(salaryPaid || 0) -
       Number(advance || 0)

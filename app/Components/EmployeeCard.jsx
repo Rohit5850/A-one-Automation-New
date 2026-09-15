@@ -1,3 +1,4 @@
+import { formatDateDMY } from "@/app/lib/displayFormat";
 export default function EmployeeCard({ employee }) {
   if (!employee) return null;
 
@@ -9,16 +10,16 @@ export default function EmployeeCard({ employee }) {
     .toUpperCase();
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden max-w-md">
+    <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-3xl shadow-[0_22px_60px_-32px_rgba(15,23,42,0.4)] shadow-sm overflow-hidden max-w-md">
       <div className="bg-slate-900 px-5 py-4 flex items-center gap-3">
         {employee.photoUrl ? (
           <img
             src={employee.photoUrl}
             alt={employee.fullName}
-            className="w-12 h-12 rounded-full object-cover border-2 border-white/20"
+            className="w-12 h-12 rounded-2xl object-cover border-2 border-white/20"
           />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-slate-700 text-white flex items-center justify-center text-sm font-semibold">
+          <div className="w-12 h-12 rounded-2xl bg-slate-700 text-white flex items-center justify-center text-sm font-semibold">
             {initials}
           </div>
         )}
@@ -35,7 +36,7 @@ export default function EmployeeCard({ employee }) {
         <Field label="Phone" value={employee.phone} />
         <Field
           label="Date of Joining"
-          value={employee.dateOfJoining ? new Date(employee.dateOfJoining).toLocaleDateString() : "-"}
+          value={employee.dateOfJoining ? formatDateDMY(employee.dateOfJoining) : "-"}
         />
         <Field label="Status" value={employee.status} />
         <Field label="Blood Group" value={employee.bloodGroup} />

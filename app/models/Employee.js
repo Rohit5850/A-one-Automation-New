@@ -27,6 +27,7 @@ const EmployeeSchema = new mongoose.Schema(
     bloodGroup: { type: String, trim: true },
     emergencyContact: { type: String, trim: true },
     salary: { type: Number, min: 0, select: false }, // current salary/rate; sensitive
+    overtimeRatePerHour: { type: Number, min: 0, default: 0, select: false }, // 0 = auto from salary/daily rate
     salaryHistory: {
       type: [
         {

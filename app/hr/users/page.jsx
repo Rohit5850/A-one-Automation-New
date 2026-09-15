@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDateDMY } from "@/app/lib/displayFormat";
 import Link from "next/link";
 
 export default function UsersPage() {
@@ -15,13 +16,10 @@ export default function UsersPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-        <h1 className="font-semibold text-slate-900">Users</h1>
-        <Link href="/hr/dashboard" className="text-sm text-slate-500 hover:text-slate-800">
-          ← Back to Dashboard
-        </Link>
-      </header>
+    <div className="">
+      <div className="px-4 sm:px-6 pt-5 pb-3">
+        <h1 className="text-xl font-semibold text-slate-900">Users</h1>
+      </div>
 
       <main className="max-w-4xl mx-auto p-6">
         {loading ? (
@@ -29,9 +27,9 @@ export default function UsersPage() {
         ) : users.length === 0 ? (
           <p className="text-slate-500 text-sm">Koi user nahi mila.</p>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100 text-slate-600 text-left">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
+              <thead className="bg-slate-50/80 text-slate-600 text-left">
                 <tr>
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Role</th>
@@ -42,7 +40,7 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u._id} className="border-t border-slate-100">
+                  <tr key={u._id} className="border-t border-slate-100/80">
                     <td className="px-4 py-3">{u.email}</td>
                     <td className="px-4 py-3 uppercase text-xs font-medium">{u.role}</td>
                     <td className="px-4 py-3">
@@ -60,7 +58,7 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-500">
-                      {new Date(u.createdAt).toLocaleDateString()}
+                      {formatDateDMY(u.createdAt)}
                     </td>
                   </tr>
                 ))}

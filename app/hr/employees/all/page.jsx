@@ -95,12 +95,12 @@ function AllEmployeesInner() {
   });
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Employee Directory</h1>
         <Link
           href="/hr/employees/new"
-          className="bg-slate-900 text-white text-sm px-4 py-2 rounded-md hover:bg-slate-800"
+          className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800"
         >
           + Add Employee
         </Link>
@@ -130,7 +130,7 @@ function AllEmployeesInner() {
           {filtered.map((emp) => (
             <div
               key={emp._id}
-              className="bg-white border border-slate-200 rounded-lg p-4 relative hover:shadow-sm transition"
+              className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-4 relative hover:shadow-sm transition"
             >
               <button
                 onClick={() => setOpenMenuId(openMenuId === emp._id ? null : emp._id)}
@@ -190,7 +190,7 @@ function AllEmployeesInner() {
                 </div>
               </Link>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-slate-700">Employee Location View</p>
                   <p className="text-[11px] text-slate-400">Attendance history location</p>

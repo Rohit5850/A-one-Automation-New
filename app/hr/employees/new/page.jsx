@@ -70,7 +70,7 @@ export default function NewEmployeePage() {
     <div className="py-10 px-4">
       <form
         onSubmit={handleSubmit}
-        className="max-w-lg mx-auto bg-white border border-slate-200 rounded-xl p-8 space-y-4"
+        className="max-w-lg mx-auto bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-8 space-y-4"
       >
         <h1 className="text-lg font-semibold text-slate-900">Add New Employee</h1>
 
@@ -88,7 +88,7 @@ export default function NewEmployeePage() {
               required={["employeeId", "fullName", "email", "password"].includes(name)}
               value={form[name]}
               onChange={(e) => update(name, e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+              className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             />
           </div>
         ))}
@@ -101,7 +101,7 @@ export default function NewEmployeePage() {
             required
             value={form.wageType}
             onChange={(e) => update("wageType", e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
             <option value="monthly">Monthly Salary</option>
             <option value="daily">Daily Wage</option>
@@ -119,7 +119,7 @@ export default function NewEmployeePage() {
             type="number"
             value={form.salary}
             onChange={(e) => update("salary", e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
           />
         </div>
 
@@ -128,7 +128,7 @@ export default function NewEmployeePage() {
           <select
             value={form.gender}
             onChange={(e) => update("gender", e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
           >
             <option value="">Select</option>
             <option value="male">Male</option>
@@ -155,7 +155,7 @@ export default function NewEmployeePage() {
           <textarea
             value={form.address}
             onChange={(e) => update("address", e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             rows={2}
           />
         </div>
@@ -163,7 +163,7 @@ export default function NewEmployeePage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-slate-900 text-white rounded-md py-2 text-sm font-medium hover:bg-slate-800 disabled:opacity-60"
+          className="w-full bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 rounded-md py-2 text-sm font-medium hover:bg-slate-800 disabled:opacity-60"
         >
           {loading ? "Saving..." : "Create Employee"}
         </button>

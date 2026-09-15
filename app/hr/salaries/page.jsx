@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 function currentMonthStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}`;
 }
 
 function shiftMonth(monthStr, delta) {
@@ -66,7 +69,7 @@ export default function SalariesPage() {
       if (!res.ok || !data?.employee || !data?.payroll) {
         throw new Error(data?.error || "Payroll data load nahi ho payi.");
       }
-      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
+      const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
       await generateSalarySlipPdf(data.employee, data.payroll, month);
     } catch (err) {
       console.error("Salary slip download failed:", err);
@@ -91,7 +94,7 @@ export default function SalariesPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMonth((m) => shiftMonth(m, -1))}
-              className="w-8 h-8 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600"
+              className="w-8 h-8 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm bg-white hover:bg-slate-50 text-slate-600"
             >
               ‹
             </button>
@@ -100,7 +103,7 @@ export default function SalariesPage() {
             </span>
             <button
               onClick={() => setMonth((m) => shiftMonth(m, 1))}
-              className="w-8 h-8 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600"
+              className="w-8 h-8 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm bg-white hover:bg-slate-50 text-slate-600"
             >
               ›
             </button>
@@ -116,9 +119,9 @@ export default function SalariesPage() {
         {loading ? (
           <p className="text-sm text-slate-500">Loading...</p>
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-100 text-slate-600 text-left">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
+            <table className="w-full min-w-[680px] text-sm">
+              <thead className="bg-slate-50/80 text-slate-600 text-left">
                 <tr>
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">Department</th>
@@ -136,7 +139,7 @@ export default function SalariesPage() {
                   </tr>
                 )}
                 {employees.map((emp) => (
-                  <tr key={emp._id} className="border-t border-slate-100">
+                  <tr key={emp._id} className="border-t border-slate-100/80">
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{emp.fullName}</p>
                       <p className="text-xs text-slate-500">{emp.employeeId}</p>
@@ -150,7 +153,7 @@ export default function SalariesPage() {
                           autoFocus
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="border border-slate-300 rounded-md px-2 py-1 text-sm w-28"
+                          className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1 text-sm w-28"
                         />
                       ) : (
                         `₹${emp.salary ?? "-"}`

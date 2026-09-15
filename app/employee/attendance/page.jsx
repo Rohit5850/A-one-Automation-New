@@ -1,12 +1,18 @@
 "use client";
 
+import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
+
 import { useEffect, useState, useCallback, useMemo } from "react";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const get = (type) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 function currentMonthStr() {
-  return new Date().toISOString().slice(0, 7);
+  return todayStr().slice(0, 7);
 }
 function shiftMonth(monthStr, delta) {
   const [y, m] = monthStr.split("-").map(Number);
@@ -326,12 +332,12 @@ export default function EmployeeAttendancePage() {
   const todayDow = (now.getDay() + 6) % 7; // Mon=0...Sun=6
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-6">
       <p className="text-xs font-medium text-slate-400 tracking-wide uppercase">Attendance</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Attendance Stats */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5">
           <p className="font-medium text-slate-900 mb-4">Attendance Stats</p>
           <p className="text-xs text-slate-400 mb-2">Last 7 working days</p>
           <div className="flex justify-between text-sm">
@@ -347,14 +353,14 @@ export default function EmployeeAttendancePage() {
         </div>
 
         {/* Timings */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5">
           <p className="font-medium text-slate-900 mb-4">Timings</p>
           <div className="flex justify-between mb-4">
             {weekdays.map((w, i) => (
               <div
                 key={i}
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
-                  i === todayDow ? "bg-[#5b4ff0] text-white" : "text-slate-400"
+                  i === todayDow ? "bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400"
                 }`}
               >
                 {w}
@@ -362,7 +368,7 @@ export default function EmployeeAttendancePage() {
             ))}
           </div>
           <p className="text-xs text-slate-500 mb-1">
-            Today {todayRecord?.checkIn ? `(${new Date(todayRecord.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${todayRecord.checkOut ? ` - ${new Date(todayRecord.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""})` : "(not checked in)"}
+            Today {todayRecord?.checkIn ? `(${formatTime24(todayRecord.checkIn)}${todayRecord.checkOut ? ` - ${formatTime24(todayRecord.checkOut)}` : ""})` : "(not checked in)"}
           </p>
           <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
             {todayRecord?.checkIn && (
@@ -375,12 +381,12 @@ export default function EmployeeAttendancePage() {
         </div>
 
         {/* Actions */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5">
           <p className="text-lg font-semibold text-slate-900">
-            {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+            {formatTime24(now, true)}
           </p>
           <p className="text-xs text-slate-400 mb-3">
-            {now.toLocaleDateString([], { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+            {formatDateDMY(now)}
           </p>
 
           {message && <p className="text-xs text-emerald-600 mb-2">{message}</p>}
@@ -425,7 +431,7 @@ export default function EmployeeAttendancePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setMonth((m) => shiftMonth(m, -1))}
-              className="w-7 h-7 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-sm"
+              className="w-7 h-7 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm bg-white hover:bg-slate-50 text-slate-600 text-sm"
             >
               ‹
             </button>
@@ -434,14 +440,14 @@ export default function EmployeeAttendancePage() {
             </span>
             <button
               onClick={() => setMonth((m) => shiftMonth(m, 1))}
-              className="w-7 h-7 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 text-sm"
+              className="w-7 h-7 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm bg-white hover:bg-slate-50 text-slate-600 text-sm"
             >
               ›
             </button>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto">
+        <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
           <div className="min-w-[1120px]">
           <div className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_90px_90px_90px]"} px-4 py-2 bg-slate-100 text-slate-500 text-xs font-medium uppercase tracking-wide`}>
             <span>Date</span>
@@ -466,10 +472,10 @@ export default function EmployeeAttendancePage() {
               return (
                 <div
                   key={d.date}
-                  className="grid grid-cols-[110px_1fr] px-4 py-3 border-t border-slate-100 bg-slate-50/70 items-center"
+                  className="grid grid-cols-[110px_1fr] px-4 py-3 border-t border-slate-100/80 bg-slate-50/70 items-center"
                 >
                   <span className="text-sm text-slate-700">
-                    {weekdayShort(d.date)}, {d.date.slice(8, 10)} {monthShort(d.date)}
+                    {formatDateDMY(d.date)}
                   </span>
                   <span className="text-xs font-medium text-slate-500 bg-slate-200 rounded px-2 py-0.5 w-fit">
                     {d.status === "holiday"
@@ -483,10 +489,10 @@ export default function EmployeeAttendancePage() {
             return (
               <div
                 key={d.date}
-                className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_90px_90px_90px]"} px-4 py-3 border-t border-slate-100 items-start`}
+                className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_90px_90px_90px]"} px-4 py-3 border-t border-slate-100/80 items-start`}
               >
                 <span className="text-sm text-slate-700">
-                  {weekdayShort(d.date)}, {d.date.slice(8, 10)} {monthShort(d.date)}
+                  {formatDateDMY(d.date)}
                 </span>
                 <div className="pr-4">
                   <div className="h-2 rounded-full bg-slate-100 overflow-hidden w-full max-w-[240px]">
@@ -508,12 +514,12 @@ export default function EmployeeAttendancePage() {
                 <span className="text-sm text-amber-700">{(d.breakMs || 0) > 0 ? fmtHM(d.breakMs) : "-"}</span>
                 <span className="text-sm text-slate-700 space-y-0.5">
                   {(d.sessions?.length ? d.sessions : [{ checkIn: d.checkIn }]).map((session, index) => (
-                    <div key={index}>{session.checkIn ? new Date(session.checkIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-"}</div>
+                    <div key={index}>{session.checkIn ? formatTime24(session.checkIn) : "-"}</div>
                   ))}
                 </span>
                 <span className="text-sm text-slate-700 space-y-0.5">
                   {(d.sessions?.length ? d.sessions : [{ checkOut: d.checkOut }]).map((session, index) => (
-                    <div key={index}>{session.checkOut ? new Date(session.checkOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Working"}</div>
+                    <div key={index}>{session.checkOut ? formatTime24(session.checkOut) : "Working"}</div>
                   ))}
                 </span>
                 {showLocationToEmployee && (

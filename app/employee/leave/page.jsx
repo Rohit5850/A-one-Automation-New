@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDateDMY } from "@/app/lib/displayFormat";
 
 const LEAVE_TYPE_LABELS = {
   earned: "Earned Leave",
   paternity: "Paternity Leave",
+  "comp-off": "C-Off / Comp-Off",
   unpaid: "Unpaid Leave",
 };
 
@@ -60,18 +62,18 @@ export default function EmployeeLeavePage() {
   const pending = history.filter((h) => h.status === "pending");
 
   return (
-    <div className="p-4 sm:p-6 space-y-6">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <p className="text-xs font-medium text-slate-400 tracking-wide uppercase">Leave</p>
         <button
           onClick={() => setShowPanel(true)}
-          className="bg-[#5b4ff0] text-white text-sm font-medium px-4 py-2 rounded-md hover:opacity-90"
+          className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 text-sm font-medium px-4 py-2 rounded-md hover:opacity-90"
         >
           Request Leave
         </button>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-lg p-5">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5">
         <p className="font-medium text-slate-900 mb-3">Pending leave requests</p>
         {pending.length === 0 ? (
           <p className="text-sm text-slate-500">Hurray! No pending leave requests.</p>
@@ -80,7 +82,7 @@ export default function EmployeeLeavePage() {
             {pending.map((r) => (
               <li key={r._id} className="text-sm text-slate-700 flex justify-between border-b border-slate-50 pb-2">
                 <span>
-                  {LEAVE_TYPE_LABELS[r.leaveType]} · {r.fromDate} to {r.toDate}
+                  {LEAVE_TYPE_LABELS[r.leaveType]} · {formatDateDMY(r.fromDate)} to {formatDateDMY(r.toDate)}
                 </span>
                 <span className="text-amber-600 text-xs font-medium">PENDING</span>
               </li>
@@ -91,8 +93,8 @@ export default function EmployeeLeavePage() {
 
       <div>
         <p className="font-medium text-slate-900 mb-3">Leave Balances</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col items-center gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5 flex flex-col items-center gap-3">
             <p className="text-sm font-medium text-slate-800 self-start">Earned Leave</p>
             <Donut
               available={balance?.earned.available ?? 0}
@@ -119,7 +121,7 @@ export default function EmployeeLeavePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col items-center gap-3">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5 flex flex-col items-center gap-3">
             <p className="text-sm font-medium text-slate-800 self-start">Paternity Leave</p>
             <Donut
               available={balance?.paternity.available ?? 0}
@@ -138,7 +140,17 @@ export default function EmployeeLeavePage() {
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col items-center gap-3">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5 flex flex-col items-center gap-3">
+            <p className="text-sm font-medium text-slate-800 self-start">C-Off / Comp-Off</p>
+            <Donut available={balance?.compOff.available ?? 0} total={balance?.compOff.earned ?? 0} color="#7c3aed" />
+            <div className="w-full grid grid-cols-2 gap-2 text-xs text-slate-500 mt-2">
+              <div><p className="uppercase">Available</p><p className="text-slate-800 font-medium">{balance?.compOff.available ?? "-"} days</p></div>
+              <div><p className="uppercase">Used</p><p className="text-slate-800 font-medium">{balance?.compOff.consumed ?? "-"} days</p></div>
+              <div><p className="uppercase">Earned</p><p className="text-slate-800 font-medium">{balance?.compOff.earned ?? "-"} days</p></div>
+            </div>
+          </div>
+
+          <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-5 flex flex-col items-center gap-3">
             <p className="text-sm font-medium text-slate-800 self-start">Unpaid Leave</p>
             <Donut available={Infinity} total={0} color="#94a3b8" />
             <div className="w-full grid grid-cols-2 gap-2 text-xs text-slate-500 mt-2">
@@ -155,12 +167,12 @@ export default function EmployeeLeavePage() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
         <p className="px-5 py-3 border-b border-slate-200 font-medium text-slate-800 text-sm">
           Leave History
         </p>
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600 text-left">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead className="bg-slate-50/80 text-slate-600 text-left">
             <tr>
               <th className="px-4 py-2">Dates</th>
               <th className="px-4 py-2">Type</th>
@@ -178,9 +190,9 @@ export default function EmployeeLeavePage() {
               </tr>
             )}
             {history.map((h) => (
-              <tr key={h._id} className="border-t border-slate-100">
+              <tr key={h._id} className="border-t border-slate-100/80">
                 <td className="px-4 py-2">
-                  {h.fromDate} → {h.toDate}
+                  {formatDateDMY(h.fromDate)} → {formatDateDMY(h.toDate)}
                 </td>
                 <td className="px-4 py-2">{LEAVE_TYPE_LABELS[h.leaveType]}</td>
                 <td className="px-4 py-2">{daysInclusive(h.fromDate, h.toDate)}</td>
@@ -252,7 +264,7 @@ function RequestLeavePanel({ balance, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-md h-full shadow-xl p-6 space-y-5 overflow-y-auto">
+      <div className="relative bg-white/90 backdrop-blur-2xl w-full max-w-md h-full shadow-2xl border-l border-white/70 p-6 space-y-5 overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">Request Leave</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl">
@@ -289,7 +301,7 @@ function RequestLeavePanel({ balance, onClose, onSaved }) {
           <select
             value={leaveType}
             onChange={(e) => setLeaveType(e.target.value)}
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           >
             <option value="">Select</option>
             <option value="earned">
@@ -297,6 +309,9 @@ function RequestLeavePanel({ balance, onClose, onSaved }) {
             </option>
             <option value="paternity">
               Paternity Leave — {balance?.paternity.available ?? "-"} days available
+            </option>
+            <option value="comp-off">
+              C-Off / Comp-Off — {balance?.compOff.available ?? "-"} days available
             </option>
             <option value="unpaid">Unpaid Leave — infinite balance</option>
           </select>
@@ -309,21 +324,21 @@ function RequestLeavePanel({ balance, onClose, onSaved }) {
             onChange={(e) => setNote(e.target.value)}
             rows={3}
             placeholder="Type here"
-            className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"
+            className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-2 text-sm"
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100/80">
           <button
             onClick={onClose}
-            className="text-sm px-4 py-2 rounded-md border border-slate-300 hover:bg-slate-50"
+            className="text-sm px-4 py-2 rounded-xl border border-slate-200/90 bg-white/85 shadow-sm hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="text-sm px-4 py-2 rounded-md bg-[#5b4ff0] text-white hover:opacity-90 disabled:opacity-60"
+            className="text-sm px-4 py-2 rounded-md bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 hover:opacity-90 disabled:opacity-60"
           >
             {saving ? "Requesting..." : "Request"}
           </button>

@@ -5,6 +5,7 @@ import dbConnect from "@/app/lib/dbConnect";
 import Employee from "@/app/models/Employee";
 import Loan from "@/app/models/Loan";
 import Transaction from "@/app/models/Transaction";
+import OvertimeEntry from "@/app/models/OvertimeEntry";
 import { buildMonthCalendar } from "@/app/lib/attendanceCalendar";
 import {
   applyLoanMonth,
@@ -50,9 +51,10 @@ function payrollStartMonth(employee, targetMonth, loans, transactions) {
 
 async function computeMonthPayroll(employee, targetMonth) {
   const targetEnd = nextMonthStart(targetMonth);
-  const [loans, transactions] = await Promise.all([
+  const [loans, transactions, overtimeEntries] = await Promise.all([
     Loan.find({ employee: employee._id }).sort({ startMonth: 1, createdAt: 1 }),
     Transaction.find({ employee: employee._id, date: { $lt: targetEnd } }).sort({ date: 1, createdAt: 1 }),
+    OvertimeEntry.find({ employee: employee._id, date: { $lte: `${targetMonth}-31` } }).sort({ date: 1, createdAt: 1 }),
   ]);
 
   const startMonth = payrollStartMonth(employee, targetMonth, loans, transactions);
@@ -61,6 +63,13 @@ async function computeMonthPayroll(employee, targetMonth) {
     const m = transactionMonth(txn);
     if (!transactionMap.has(m)) transactionMap.set(m, []);
     transactionMap.get(m).push(txn);
+  }
+
+  const overtimeMap = new Map();
+  for (const entry of overtimeEntries) {
+    const m = entry.date.slice(0, 7);
+    if (!overtimeMap.has(m)) overtimeMap.set(m, []);
+    overtimeMap.get(m).push(entry);
   }
 
   const loanStates = createLoanStates(loans);
@@ -86,6 +95,8 @@ async function computeMonthPayroll(employee, targetMonth) {
       dailyRate: rate.wageType === "monthly" ? roundMoney(rate.amount / daysInMonth(targetMonth)) : roundMoney(rate.amount),
       grossEarnings: 0,
       bonus: 0,
+      overtimeHours: 0,
+      overtimePay: 0,
       loanDeduction: 0,
       loanOutstanding: loanStates.reduce((sum, s) => roundMoney(sum + s.outstanding), 0),
       salaryPaid: 0,
@@ -108,6 +119,11 @@ async function computeMonthPayroll(employee, targetMonth) {
     const grossEarnings = roundMoney(dailyRate * paidDaysEquivalent);
 
     const monthTxns = transactionMap.get(month) || [];
+    const monthOvertime = overtimeMap.get(month) || [];
+    const overtimeHours = roundMoney(monthOvertime.reduce((sum, e) => sum + Number(e.hours || 0), 0));
+    const overtimePay = roundMoney(monthOvertime
+      .filter((e) => e.settlement === "pay")
+      .reduce((sum, e) => sum + Number(e.amount || 0), 0));
     let bonus = 0;
     let advance = 0;
     let salaryPaid = 0;
@@ -141,6 +157,7 @@ async function computeMonthPayroll(employee, targetMonth) {
       previousBalance,
       grossEarnings,
       bonus,
+      overtimePay,
       loanDeduction,
       salaryPaid,
       advance,
@@ -156,6 +173,8 @@ async function computeMonthPayroll(employee, targetMonth) {
       dailyRate,
       grossEarnings,
       bonus,
+      overtimeHours,
+      overtimePay,
       loanDeduction,
       loanOutstanding,
       salaryPaid,

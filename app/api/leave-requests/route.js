@@ -56,7 +56,7 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    if (!["earned", "paternity", "unpaid"].includes(leaveType)) {
+    if (!["earned", "paternity", "comp-off", "unpaid"].includes(leaveType)) {
       return NextResponse.json({ error: "Invalid leave type" }, { status: 400 });
     }
     if (new Date(toDate) < new Date(fromDate)) {

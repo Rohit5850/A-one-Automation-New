@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDateDMY } from "@/app/lib/displayFormat";
 
 const LEAVE_TYPE_LABELS = {
   earned: "Earned Leave",
   paternity: "Paternity Leave",
+  "comp-off": "C-Off / Comp-Off",
   unpaid: "Unpaid Leave",
 };
 
@@ -42,7 +44,7 @@ export default function LeaveRequestsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="p-3 sm:p-6 lg:p-8 space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-semibold text-slate-900">Leave Requests</h1>
         <div className="flex items-center gap-3">
@@ -52,7 +54,7 @@ export default function LeaveRequestsPage() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="text-sm border border-slate-300 rounded-md px-3 py-1.5"
+            className="text-sm border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-3 py-1.5"
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
@@ -62,9 +64,9 @@ export default function LeaveRequestsPage() {
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600 text-left">
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead className="bg-slate-50/80 text-slate-600 text-left">
             <tr>
               <th className="px-4 py-3">Employee</th>
               <th className="px-4 py-3">Type</th>
@@ -90,14 +92,14 @@ export default function LeaveRequestsPage() {
               </tr>
             )}
             {requests.map((r) => (
-              <tr key={r._id} className="border-t border-slate-100">
+              <tr key={r._id} className="border-t border-slate-100/80">
                 <td className="px-4 py-3">
                   <p className="font-medium text-slate-900">{r.employee?.fullName}</p>
                   <p className="text-xs text-slate-400">{r.employee?.employeeId}</p>
                 </td>
                 <td className="px-4 py-3">{LEAVE_TYPE_LABELS[r.leaveType]}</td>
                 <td className="px-4 py-3">
-                  {r.fromDate} → {r.toDate}
+                  {formatDateDMY(r.fromDate)} → {formatDateDMY(r.toDate)}
                 </td>
                 <td className="px-4 py-3 text-slate-500">{r.note || "-"}</td>
                 <td className="px-4 py-3">

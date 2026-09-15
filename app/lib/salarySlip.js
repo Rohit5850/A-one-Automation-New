@@ -25,9 +25,9 @@ function formatDate(value) {
   if (!value) return "-";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-IN", {
+  return d.toLocaleDateString("en-GB", {
     day: "2-digit",
-    month: "short",
+    month: "2-digit",
     year: "numeric",
   });
 }
@@ -171,7 +171,9 @@ export async function generateSalarySlipPdf(employee, payroll, month) {
       : round2(salaryValue);
   const baseEarnings = round2(payroll.grossEarnings || 0);
   const bonus = round2(payroll.bonus || 0);
-  const totalEarnings = round2(baseEarnings + bonus);
+  const overtimePay = round2(payroll.overtimePay || 0);
+  const overtimeHours = round2(payroll.overtimeHours || 0);
+  const totalEarnings = round2(baseEarnings + bonus + overtimePay);
   const salaryPaid = round2(payroll.salaryPaid || 0);
   const advance = round2(payroll.advance || 0);
   const loanDeduction = round2(payroll.loanDeduction || 0);
@@ -244,7 +246,8 @@ export async function generateSalarySlipPdf(employee, payroll, month) {
       : `Daily Rate = ${money(dailyRate)}`,
     `Paid Days = Present + Paid Leave + Holiday + Week Off + (Half Day x 0.5) = ${paidDaysEquivalent}`,
     `Attendance Earnings = Daily Rate x Paid Days = ${money(dailyRate)} x ${paidDaysEquivalent} = ${money(baseEarnings)}`,
-    `Net Payable = Previous Balance + Total Earnings - Salary Paid - Advance - Loan EMI`,
+    `Overtime Pay = approved HR overtime marked as Pay = ${money(overtimePay)}`,
+    `Net Payable = Previous Balance + Attendance Earnings + Bonus + Overtime Pay - Salary Paid - Advance - Loan EMI`,
   ];
   calculationLines.forEach((line) => {
     const lines = doc.splitTextToSize(line, 172);
@@ -256,6 +259,7 @@ export async function generateSalarySlipPdf(employee, payroll, month) {
   y = drawSectionTitle(doc, "Earnings", y);
   y = drawAmountRow(doc, `Attendance Earnings (${paidDaysEquivalent} paid days)`, baseEarnings, y);
   y = drawAmountRow(doc, "Bonus", bonus, y);
+  y = drawAmountRow(doc, `Overtime Pay (${overtimeHours} hrs)`, overtimePay, y);
   y = drawAmountRow(doc, "Gross Earnings", totalEarnings, y, { bold: true, shaded: true });
 
   y += 3;
