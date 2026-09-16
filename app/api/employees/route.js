@@ -6,6 +6,7 @@ import dbConnect from "@/app/lib/dbConnect";
 import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
 import { monthFromDate, todayDateKey } from "@/app/lib/payrollRules";
+import { hasMailDomain, isEmailSyntaxValid, isValidIndianMobile, isValidUsername, normalizeEmail, normalizeIndianPhone, normalizeUsername } from "@/app/lib/identityValidation";
 
 // GET /api/employees -> HR only: list all employee cards, or ?employeeId=EMP-0001 to find one
 export async function GET(req) {
@@ -38,6 +39,7 @@ export async function POST(req) {
   const {
     employeeId,
     fullName,
+    username,
     email,
     phone,
     gender,
@@ -55,11 +57,23 @@ export async function POST(req) {
     password, // initial login password set by HR; employee should change later
   } = body;
 
-  if (!employeeId || !fullName || !email || !password) {
-    return NextResponse.json(
-      { error: "employeeId, fullName, email and password are required" },
-      { status: 400 }
-    );
+  if (!employeeId || !fullName || !username || !email || !phone || !password) {
+    return NextResponse.json({ error: "Employee ID, name, username, email, mobile aur password required hain" }, { status: 400 });
+  }
+  const cleanEmail = normalizeEmail(email);
+  const cleanUsername = normalizeUsername(username);
+  const cleanPhone = normalizeIndianPhone(phone);
+  if (!isValidUsername(cleanUsername)) {
+    return NextResponse.json({ error: "Username 4-30 characters ka ho aur sirf letters, numbers, dot, underscore ya hyphen use karein" }, { status: 400 });
+  }
+  if (!isEmailSyntaxValid(cleanEmail)) {
+    return NextResponse.json({ error: "Valid email address enter karein" }, { status: 400 });
+  }
+  if (!(await hasMailDomain(cleanEmail))) {
+    return NextResponse.json({ error: "Email domain valid/mail-enabled nahi hai" }, { status: 400 });
+  }
+  if (!isValidIndianMobile(cleanPhone)) {
+    return NextResponse.json({ error: "Valid 10-digit Indian mobile number enter karein (6-9 se start)" }, { status: 400 });
   }
   if (!wageType || !["daily", "monthly"].includes(wageType)) {
     return NextResponse.json(
@@ -77,17 +91,21 @@ export async function POST(req) {
 
   await dbConnect();
 
-  const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+  const existingUser = await User.findOne({
+    $or: [{ email: cleanEmail }, { username: cleanUsername }, { phone: cleanPhone }],
+  });
   if (existingUser) {
-    return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+    const field = existingUser.email === cleanEmail ? "Email" : existingUser.username === cleanUsername ? "Username" : "Mobile number";
+    return NextResponse.json({ error: `${field} already in use` }, { status: 409 });
   }
 
   try {
     const employee = await Employee.create({
       employeeId,
       fullName,
-      email,
-      phone,
+      username: cleanUsername,
+      email: cleanEmail,
+      phone: cleanPhone,
       gender: gender || undefined,
       designation,
       department,
@@ -116,7 +134,9 @@ export async function POST(req) {
     const passwordHash = await bcrypt.hash(password, 12);
 
     await User.create({
-      email: email.toLowerCase().trim(),
+      email: cleanEmail,
+      username: cleanUsername,
+      phone: cleanPhone,
       passwordHash,
       role: "employee",
       employee: employee._id,

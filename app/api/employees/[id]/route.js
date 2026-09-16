@@ -5,6 +5,7 @@ import dbConnect from "@/app/lib/dbConnect";
 import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
 import { monthFromDate, todayDateKey } from "@/app/lib/payrollRules";
+import { hasMailDomain, isEmailSyntaxValid, isValidIndianMobile, isValidUsername, normalizeEmail, normalizeIndianPhone, normalizeUsername } from "@/app/lib/identityValidation";
 
 async function requireHR() {
   const session = await getServerSession(authOptions);
@@ -60,6 +61,34 @@ export async function PUT(req, { params }) {
     await dbConnect();
     const current = await Employee.findById(id).select("+salary +salaryHistory");
     if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const linkedUser = await User.findOne({ employee: id });
+    if (Object.prototype.hasOwnProperty.call(updates, "email")) {
+      updates.email = normalizeEmail(updates.email);
+      if (!isEmailSyntaxValid(updates.email) || !(await hasMailDomain(updates.email))) {
+        return NextResponse.json({ error: "Valid mail-enabled email address enter karein" }, { status: 400 });
+      }
+      const duplicate = await User.findOne({ email: updates.email, _id: { $ne: linkedUser?._id } });
+      if (duplicate) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "username") && !String(updates.username || "").trim()) {
+      delete updates.username;
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "username")) {
+      updates.username = normalizeUsername(updates.username);
+      if (!isValidUsername(updates.username)) return NextResponse.json({ error: "Username valid nahi hai" }, { status: 400 });
+      const duplicate = await User.findOne({ username: updates.username, _id: { $ne: linkedUser?._id } });
+      if (duplicate) return NextResponse.json({ error: "Username already in use" }, { status: 409 });
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "phone") && !String(updates.phone || "").trim()) {
+      delete updates.phone;
+    }
+    if (Object.prototype.hasOwnProperty.call(updates, "phone")) {
+      updates.phone = normalizeIndianPhone(updates.phone);
+      if (!isValidIndianMobile(updates.phone)) return NextResponse.json({ error: "Valid 10-digit Indian mobile number enter karein" }, { status: 400 });
+      const duplicate = await User.findOne({ phone: updates.phone, _id: { $ne: linkedUser?._id } });
+      if (duplicate) return NextResponse.json({ error: "Mobile number already in use" }, { status: 409 });
+    }
 
     const finalJoinDate = Object.prototype.hasOwnProperty.call(updates, "dateOfJoining")
       ? updates.dateOfJoining
@@ -128,6 +157,14 @@ export async function PUT(req, { params }) {
       { $set: updates },
       { new: true, runValidators: true }
     ).select("+salary");
+
+    if (linkedUser) {
+      const userUpdates = {};
+      if (updates.email) userUpdates.email = updates.email;
+      if (updates.username) userUpdates.username = updates.username;
+      if (updates.phone) userUpdates.phone = updates.phone;
+      if (Object.keys(userUpdates).length) await User.updateOne({ _id: linkedUser._id }, { $set: userUpdates });
+    }
 
     return NextResponse.json({ employee });
   } catch (err) {

@@ -9,6 +9,7 @@ const EmployeeSchema = new mongoose.Schema(
       trim: true,
     },
     fullName: { type: String, required: true, trim: true },
+    username: { type: String, lowercase: true, trim: true },
     email: { type: String, required: true, lowercase: true, trim: true },
     phone: { type: String, trim: true },
     designation: { type: String, trim: true },

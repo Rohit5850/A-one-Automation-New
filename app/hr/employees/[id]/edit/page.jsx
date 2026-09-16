@@ -6,8 +6,9 @@ import Link from "next/link";
 
 const FIELDS = [
   ["fullName", "Full Name", "text"],
+  ["username", "Username", "text"],
   ["email", "Email", "email"],
-  ["phone", "Phone", "text"],
+  ["phone", "Mobile Number", "tel"],
   ["designation", "Designation", "text"],
   ["department", "Department", "text"],
   ["dateOfJoining", "Date of Joining", "date"],
@@ -120,7 +121,10 @@ export default function EditEmployeePage({ params }) {
             <input
               type={type}
               value={type === "date" ? (form[name] || "").slice(0, 10) : form[name] || ""}
-              onChange={(e) => update(name, e.target.value)}
+              maxLength={name === "phone" ? 10 : name === "username" ? 30 : undefined}
+              inputMode={name === "phone" ? "numeric" : undefined}
+              pattern={name === "phone" ? "[6-9][0-9]{9}" : name === "username" ? "[A-Za-z0-9][A-Za-z0-9._-]{3,29}" : undefined}
+              onChange={(e) => update(name, name === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value)}
               className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             />
           </div>

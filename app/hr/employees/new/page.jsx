@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 const initial = {
   employeeId: "",
   fullName: "",
+  username: "",
   email: "",
   phone: "",
   gender: "",
@@ -56,9 +57,10 @@ export default function NewEmployeePage() {
   const fields = [
     ["employeeId", "Employee ID", "text"],
     ["fullName", "Full Name", "text"],
-    ["email", "Email (login ke liye)", "email"],
+    ["username", "Unique Username (login ke liye)", "text"],
+    ["email", "Email (login / Google ke liye)", "email"],
     ["password", "Initial Password", "text"],
-    ["phone", "Phone", "text"],
+    ["phone", "Mobile Number", "tel"],
     ["designation", "Designation", "text"],
     ["department", "Department", "text"],
     ["dateOfJoining", "Date of Joining", "date"],
@@ -85,9 +87,12 @@ export default function NewEmployeePage() {
             <label className="text-sm font-medium text-slate-700">{label}</label>
             <input
               type={type}
-              required={["employeeId", "fullName", "email", "password"].includes(name)}
+              required={["employeeId", "fullName", "username", "email", "phone", "password"].includes(name)}
               value={form[name]}
-              onChange={(e) => update(name, e.target.value)}
+              maxLength={name === "phone" ? 10 : name === "username" ? 30 : undefined}
+              inputMode={name === "phone" ? "numeric" : undefined}
+              pattern={name === "phone" ? "[6-9][0-9]{9}" : name === "username" ? "[A-Za-z0-9][A-Za-z0-9._-]{3,29}" : undefined}
+              onChange={(e) => update(name, name === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value)}
               className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
             />
           </div>
