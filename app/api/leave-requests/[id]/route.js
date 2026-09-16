@@ -40,11 +40,14 @@ export async function PATCH(req, { params }) {
       return NextResponse.json({ error: "Ye leave request already review ho chuki hai" }, { status: 400 });
     }
 
-    if (status === "approved" && request.leaveType === "comp-off") {
+    if (status === "approved" && request.leaveType !== "unpaid") {
       const balance = await computeLeaveBalance(request.employee);
       const needed = await countLeaveWorkingDays(request.employee, request.fromDate, request.toDate);
-      if (needed > Number(balance.compOff?.available || 0)) {
-        return NextResponse.json({ error: `C-Off balance sirf ${balance.compOff?.available || 0} day available hai` }, { status: 400 });
+      const balanceKey = request.leaveType === "comp-off" ? "compOff" : request.leaveType;
+      const available = Number(balance?.[balanceKey]?.available || 0);
+      if (needed > available) {
+        const label = request.leaveType === "comp-off" ? "C-Off" : request.leaveType === "earned" ? "Paid/Earned Leave" : "Paternity Leave";
+        return NextResponse.json({ error: `${label} balance sirf ${available} day available hai` }, { status: 400 });
       }
     }
 
@@ -81,6 +84,7 @@ export async function PATCH(req, { params }) {
               employee: request.employee,
               date,
               status: "leave",
+              leaveType: request.leaveType,
               reason: request.leaveType === "comp-off" ? `C-OFF${request.note ? ` - ${request.note}` : ""}` : `${request.leaveType} leave${request.note ? ` - ${request.note}` : ""}`,
             },
           },

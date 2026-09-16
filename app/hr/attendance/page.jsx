@@ -35,6 +35,26 @@ function indiaDateKey(value = new Date()) {
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
+function attendanceStatusLabel(record) {
+  if (!record) return "-";
+  if (record.status !== "leave") {
+    if (record.status === "half-day") return "Half Day";
+    return record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : "-";
+  }
+  if (record.leaveType === "comp-off") return "C-Off";
+  if (record.leaveType === "earned") return "Paid Leave";
+  if (record.leaveType === "paternity") return "Paternity Leave";
+  return "Unpaid Leave";
+}
+
+function manualStatusPayload(selection) {
+  if (selection === "paid-leave") return { status: "leave", leaveType: "earned" };
+  if (selection === "paternity-leave") return { status: "leave", leaveType: "paternity" };
+  if (selection === "comp-off") return { status: "leave", leaveType: "comp-off" };
+  if (selection === "unpaid-leave") return { status: "leave", leaveType: "unpaid" };
+  return { status: selection, leaveType: null };
+}
+
 export default function HRAttendancePage() {
   const [allEmployees, setAllEmployees] = useState([]);
   const [filterText, setFilterText] = useState("");
@@ -52,7 +72,7 @@ export default function HRAttendancePage() {
 
   // Leave / half-day / absent marking state
   const [leaveDate, setLeaveDate] = useState(indiaDateKey());
-  const [leaveStatus, setLeaveStatus] = useState("leave");
+  const [leaveStatus, setLeaveStatus] = useState("paid-leave");
   const [leaveReason, setLeaveReason] = useState("");
   const [leaveSaving, setLeaveSaving] = useState(false);
   const [leaveMessage, setLeaveMessage] = useState("");
@@ -85,7 +105,7 @@ export default function HRAttendancePage() {
     setManualCheckOut("");
     setManualMessage("");
     setLeaveDate(indiaDateKey());
-    setLeaveStatus("leave");
+    setLeaveStatus("paid-leave");
     setLeaveReason("");
     setLeaveMessage("");
     loadHistory(emp._id);
@@ -201,19 +221,21 @@ export default function HRAttendancePage() {
     if (!employee) return;
     setLeaveSaving(true);
     setLeaveMessage("");
+    const selected = manualStatusPayload(leaveStatus);
     const res = await fetch("/api/attendance/manual", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         employeeId: employee._id,
         date: leaveDate,
-        status: leaveStatus,
+        status: selected.status,
+        leaveType: selected.leaveType,
         reason: leaveReason,
       }),
     });
     setLeaveSaving(false);
     if (res.ok) {
-      setLeaveMessage(`${formatDateDMY(leaveDate)} ko "${leaveStatus}" mark ho gaya.`);
+      setLeaveMessage(`${formatDateDMY(leaveDate)} ka status save ho gaya.`);
       setLeaveReason("");
       loadHistory(employee._id);
     } else {
@@ -234,7 +256,7 @@ export default function HRAttendancePage() {
         </Link>
       </div>
 
-      <main className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
         {!employee && (
           <>
             <input
@@ -317,8 +339,18 @@ export default function HRAttendancePage() {
               </div>
 
               <div className="pt-4 mt-2 border-t border-slate-100/80 space-y-3">
-                <p className="text-sm font-medium text-slate-700">Manual Entry (kisi bhi date ke liye)</p>
-                {manualMessage && <p className="text-sm text-emerald-600">{manualMessage}</p>}
+                <div>
+                  <p className="text-sm font-semibold text-slate-800">Manual Entry (kisi bhi date ke liye)</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Time 24-hour HH:MM format me save hota hai. Check-out clock time Check-in se chhota/equal ho
+                    to system use next-day checkout maanta hai (e.g. 14:30 → 00:00 = 9h 30m).
+                  </p>
+                </div>
+                {manualMessage && (
+                  <p className={`text-sm ${manualMessage.includes("save ho gaya") ? "text-emerald-600" : "text-red-600"}`}>
+                    {manualMessage}
+                  </p>
+                )}
                 <div className="flex gap-3 flex-wrap items-end">
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500">Date</label>
@@ -387,17 +419,18 @@ export default function HRAttendancePage() {
 
               <div className="pt-4 mt-2 border-t border-slate-100/80 space-y-3">
                 <p className="text-sm font-medium text-slate-700">
-                  Mark Leave / Half-day / Absent
+                  Mark Attendance Status
                 </p>
                 <p className="text-xs text-slate-400">
                   Holiday aur Sunday (week-off) automatically lagte hain -{" "}
                   <Link href="/hr/holidays" className="underline">
                     Holiday Calendar yaha set karein
                   </Link>
-                  . Ye section sirf kisi ek employee ki individual leave/absent/half-day mark
-                  karne ke liye hai.
+                  . Paid Leave aur C-Off salary me paid day count honge; Unpaid Leave aur Absent ka salary day nahi banega; Half Day 0.5 paid day hoga.
                 </p>
-                {leaveMessage && <p className="text-sm text-emerald-600">{leaveMessage}</p>}
+                {leaveMessage && (
+                  <p className={`text-sm ${leaveMessage.includes("save ho gaya") ? "text-emerald-600" : "text-red-600"}`}>{leaveMessage}</p>
+                )}
                 <div className="flex gap-3 flex-wrap items-end">
                   <div className="space-y-1">
                     <label className="text-xs text-slate-500">Date</label>
@@ -416,10 +449,13 @@ export default function HRAttendancePage() {
                       onChange={(e) => setLeaveStatus(e.target.value)}
                       className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
                     >
-                      <option value="leave">Leave</option>
-                      <option value="half-day">Half Day</option>
+                      <option value="present">Present</option>
+                      <option value="half-day">Half Day (0.5 Paid Day)</option>
+                      <option value="paid-leave">Paid Leave / Earned Leave</option>
+                      <option value="paternity-leave">Paternity Leave (Paid)</option>
+                      <option value="comp-off">C-Off / Comp-Off (Paid)</option>
+                      <option value="unpaid-leave">Unpaid Leave</option>
                       <option value="absent">Absent</option>
-                      <option value="present">Present (revert to normal)</option>
                     </select>
                   </div>
 
@@ -445,21 +481,23 @@ export default function HRAttendancePage() {
               </div>
             </div>
 
-            <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
-              <div className="px-5 py-3 border-b border-slate-200 font-medium text-slate-800 text-sm">
-                Attendance History
+            <div className="bg-white/85 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-200">
+                <p className="font-semibold text-slate-900 text-sm">Attendance History</p>
+                <p className="text-xs text-slate-400 mt-0.5">Saved check-in/out, worked time, break, status aur location.</p>
               </div>
-              <table className="w-full min-w-[680px] text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead className="bg-slate-50/80 text-slate-600 text-left">
                   <tr>
-                    <th className="px-4 py-2">Date</th>
-                    <th className="px-4 py-2">Check-in Time</th>
-                    <th className="px-4 py-2">Check-out Time</th>
-                    <th className="px-4 py-2">Worked Time</th>
-                    <th className="px-4 py-2">Break Time</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Date</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Check-in Time</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Check-out Time</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Worked Time</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Break Time</th>
                     <th className="px-4 py-2">Status</th>
                     <th className="px-4 py-2">Reason</th>
-                    <th className="px-4 py-2 min-w-[280px]">Location</th>
+                    <th className="px-4 py-3 min-w-[240px]">Location</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -479,13 +517,22 @@ export default function HRAttendancePage() {
                         ))}
                       </td>
                       <td className="px-4 py-2">
-                        {(r.sessions?.length ? r.sessions : [{ checkOut: r.checkOut }]).map((session, i) => (
-                          <div key={i}>{session.checkOut ? formatTime24(session.checkOut) : "Working"}</div>
-                        ))}
+                        {(r.sessions?.length
+                          ? r.sessions
+                          : r.checkIn
+                            ? [{ checkIn: r.checkIn, checkOut: r.checkOut }]
+                            : []
+                        ).length > 0 ? (
+                          (r.sessions?.length ? r.sessions : [{ checkIn: r.checkIn, checkOut: r.checkOut }]).map((session, i) => (
+                            <div key={i}>{session.checkOut ? formatTime24(session.checkOut) : "Working"}</div>
+                          ))
+                        ) : (
+                          <div>-</div>
+                        )}
                       </td>
                       <td className="px-4 py-2">{formatMs(r.workedMs)}</td>
                       <td className="px-4 py-2 text-amber-700">{formatMs(r.breakMs)}</td>
-                      <td className="px-4 py-2 capitalize">{r.status === "leave" && String(r.reason || "").startsWith("C-OFF") ? "C-OFF" : r.status}</td>
+                      <td className="px-4 py-2 font-medium whitespace-nowrap">{attendanceStatusLabel(r)}</td>
                       <td className="px-4 py-2 text-slate-500">{r.reason || "-"}</td>
                       <td className="px-4 py-2">
                         {(r.sessions?.length ? r.sessions : [{ checkInLocation: r.checkInLocation, checkOutLocation: r.checkOutLocation }]).map((session, index) => (
@@ -502,6 +549,7 @@ export default function HRAttendancePage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           </>
         )}

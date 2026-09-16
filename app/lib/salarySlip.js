@@ -125,15 +125,16 @@ function drawCountRow(doc, payroll, y) {
   const items = [
     ["Present", s.present || 0],
     ["Half Day", s.halfDay || 0],
-    ["Paid Leave", s.paidLeave || 0],
+    ["Paid Leave", Math.max(0, (s.paidLeave || 0) - (s.compOffLeave || 0))],
+    ["C-Off", s.compOffLeave || 0],
     ["Unpaid Leave", s.unpaidLeave || 0],
     ["Absent", s.absent || 0],
     ["Holiday", s.holiday || 0],
     ["Week Off", s.weekOff || 0],
   ];
 
-  const step = 25.7;
-  const boxW = 24.2;
+  const step = 22.5;
+  const boxW = 21.2;
   items.forEach(([label, value], index) => {
     const x = 15 + index * step;
     doc.setFillColor(250, 250, 251);

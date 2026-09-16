@@ -74,6 +74,9 @@ export function summarizeAttendance(days = []) {
     halfDay: 0,
     leave: 0,
     paidLeave: 0,
+    earnedLeave: 0,
+    paternityLeave: 0,
+    compOffLeave: 0,
     unpaidLeave: 0,
     absent: 0,
     holiday: 0,
@@ -84,8 +87,14 @@ export function summarizeAttendance(days = []) {
     else if (d.status === "half-day") summary.halfDay++;
     else if (d.status === "leave") {
       summary.leave++;
-      if (isPaidLeaveType(d.leaveType)) summary.paidLeave++;
-      else summary.unpaidLeave++;
+      if (isPaidLeaveType(d.leaveType)) {
+        summary.paidLeave++;
+        if (d.leaveType === "earned") summary.earnedLeave++;
+        else if (d.leaveType === "paternity") summary.paternityLeave++;
+        else if (d.leaveType === "comp-off") summary.compOffLeave++;
+      } else {
+        summary.unpaidLeave++;
+      }
     } else if (d.status === "absent") summary.absent++;
     else if (d.status === "holiday") summary.holiday++;
     else if (d.status === "week-off") summary.weekOff++;

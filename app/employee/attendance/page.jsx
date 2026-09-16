@@ -45,6 +45,20 @@ function fmtHMS(ms) {
 
 const ON_TIME_CUTOFF_HOUR = 10; // arrival before 10:00 AM counts as "On Time"
 
+function attendanceStatusLabel(day) {
+  if (!day) return "-";
+  if (day.status === "leave") {
+    if (day.leaveType === "comp-off") return "C-Off";
+    if (day.leaveType === "earned") return "Paid Leave";
+    if (day.leaveType === "paternity") return "Paternity Leave";
+    return "Unpaid Leave";
+  }
+  if (day.status === "half-day") return "Half Day";
+  if (day.status === "absent") return "Absent";
+  if (day.status === "present") return "Present";
+  return day.status || "-";
+}
+
 export default function EmployeeAttendancePage() {
   const [now, setNow] = useState(new Date());
   const [month, setMonth] = useState(currentMonthStr());
@@ -505,10 +519,12 @@ export default function EmployeeAttendancePage() {
                       />
                     )}
                   </div>
-                  {d.reason && <p className="text-xs text-slate-400 mt-1">{d.reason}</p>}
-                  {d.status === "absent" && (
-                    <p className="text-xs text-red-500 mt-1">Absent</p>
-                  )}
+                  <p className={`text-xs font-medium mt-1 ${
+                    d.status === "absent" ? "text-red-600" :
+                    d.status === "leave" ? (d.leaveType === "unpaid" ? "text-rose-600" : "text-blue-600") :
+                    d.status === "half-day" ? "text-amber-600" : "text-emerald-600"
+                  }`}>{attendanceStatusLabel(d)}</p>
+                  {d.reason && <p className="text-xs text-slate-400 mt-0.5">{d.reason}</p>}
                 </div>
                 <span className="text-sm text-slate-700">{eff || "-"}</span>
                 <span className="text-sm text-amber-700">{(d.breakMs || 0) > 0 ? fmtHM(d.breakMs) : "-"}</span>

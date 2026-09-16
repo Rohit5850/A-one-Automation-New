@@ -270,7 +270,8 @@ function AttendanceTab({ payrollData, loading }) {
     ["Present (P)", summary.present || 0, "text-emerald-700"],
     ["Absent (A)", summary.absent || 0, "text-red-700"],
     ["Half Day (HD)", summary.halfDay || 0, "text-amber-700"],
-    ["Paid Leave", summary.paidLeave || 0, "text-blue-700"],
+    ["Paid Leave", Math.max(0, (summary.paidLeave || 0) - (summary.compOffLeave || 0)), "text-blue-700"],
+    ["C-Off", summary.compOffLeave || 0, "text-indigo-700"],
     ["Unpaid Leave", summary.unpaidLeave || 0, "text-cyan-700"],
     ["Holiday", summary.holiday || 0, "text-purple-700"],
     ["Week Off", summary.weekOff || 0, "text-slate-500"],
@@ -278,7 +279,7 @@ function AttendanceTab({ payrollData, loading }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {stats.map(([label, val, color]) => (
           <div key={label} className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-3 text-center">
             <p className={`text-xl font-semibold ${color}`}>{val}</p>
@@ -525,7 +526,7 @@ function DetailsTab({ employee, payroll, month }) {
     setSending(true);
     setMessage("");
     try {
-      const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
+      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
       await generateSalarySlipPdf(employee, payroll, month);
     } catch (err) {
       console.error(err);

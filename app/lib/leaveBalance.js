@@ -1,6 +1,5 @@
 import dbConnect from "./dbConnect";
 import Employee from "@/app/models/Employee";
-import LeaveRequest from "@/app/models/LeaveRequest";
 import Holiday from "@/app/models/Holiday";
 import Attendance from "@/app/models/Attendance";
 import OvertimeEntry from "@/app/models/OvertimeEntry";
@@ -63,55 +62,35 @@ export async function computeLeaveBalance(employeeId) {
   const accrualStart = joinDate > yearStart ? joinDate : yearStart;
   const accrualEnd = leaveDate && leaveDate < today ? leaveDate : today;
 
-  const [approvedThisYear, attendanceRecords, compOffCredits, approvedCompOffAll, compOffAttendanceRecords] = await Promise.all([
-    LeaveRequest.find({
-      employee: employeeId,
-      status: "approved",
-      fromDate: { $lte: yearEnd },
-      toDate: { $gte: yearStart },
-    }).sort({ createdAt: 1 }),
+  const [attendanceRecords, compOffCredits, allCompOffLeaveRecords, yearHolidays] = await Promise.all([
     Attendance.find({
       employee: employeeId,
       date: { $gte: yearStart, $lte: yearEnd },
-    }).select("date status"),
+      status: "leave",
+    }).select("date status leaveType reason"),
     OvertimeEntry.find({ employee: employeeId, settlement: "comp-off" }).select("date compOffDays"),
-    LeaveRequest.find({ employee: employeeId, status: "approved", leaveType: "comp-off" }).sort({ createdAt: 1 }),
-    Attendance.find({ employee: employeeId, status: "leave" }).select("date status"),
+    Attendance.find({ employee: employeeId, status: "leave" }).select("date status leaveType reason"),
+    Holiday.find({ date: { $gte: yearStart, $lte: yearEnd } }).select("date"),
   ]);
-  const attendanceMap = new Map(attendanceRecords.map((r) => [r.date, r.status]));
 
+  // Attendance is the final source of truth. Approved employee leave requests and
+  // HR manual leave marking both persist leaveType on Attendance. If an employee
+  // later works on that date, status changes away from leave and the balance is
+  // automatically restored.
+  const yearHolidaySet = new Set(yearHolidays.map((h) => h.date));
   let consumedEarned = 0;
   let consumedPaternity = 0;
   let consumedUnpaid = 0;
-  let consumedCompOff = 0;
-  const countedDates = new Set();
-
-  for (const req of approvedThisYear) {
-    const from = req.fromDate < yearStart ? yearStart : req.fromDate;
-    const to = req.toDate > yearEnd ? yearEnd : req.toDate;
-    const dates = await workingDates(employeeId, from, to);
-    for (const date of dates) {
-      if (countedDates.has(date)) continue;
-      // An approved leave only consumes balance while that day is actually
-      // recorded as leave. If the employee later works/punches, balance is restored.
-      if (attendanceMap.get(date) !== "leave") continue;
-      countedDates.add(date);
-      if (req.leaveType === "earned") consumedEarned++;
-      else if (req.leaveType === "paternity") consumedPaternity++;
-      else if (req.leaveType === "unpaid") consumedUnpaid++;
-    }
+  for (const record of attendanceRecords) {
+    const isSunday = new Date(`${record.date}T00:00:00Z`).getUTCDay() === 0;
+    if (isSunday || yearHolidaySet.has(record.date)) continue;
+    const type = record.leaveType || "unpaid";
+    if (type === "earned") consumedEarned++;
+    else if (type === "paternity") consumedPaternity++;
+    else if (type === "unpaid") consumedUnpaid++;
   }
 
-  const compOffAttendanceMap = new Map(compOffAttendanceRecords.map((r) => [r.date, r.status]));
-  const compOffCountedDates = new Set();
-  for (const req of approvedCompOffAll) {
-    const dates = await workingDates(employeeId, req.fromDate, req.toDate);
-    for (const date of dates) {
-      if (compOffCountedDates.has(date) || compOffAttendanceMap.get(date) !== "leave") continue;
-      compOffCountedDates.add(date);
-      consumedCompOff++;
-    }
-  }
+  const consumedCompOff = allCompOffLeaveRecords.filter((record) => record.leaveType === "comp-off").length;
   // C-Off credits carry forward until used. No silent year-end expiry is applied.
   const compOffEarned = Math.round(compOffCredits.reduce((sum, e) => sum + Number(e.compOffDays || 0), 0) * 10) / 10;
 

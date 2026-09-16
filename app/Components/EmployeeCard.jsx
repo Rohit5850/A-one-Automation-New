@@ -29,7 +29,7 @@ export default function EmployeeCard({ employee }) {
         </div>
       </div>
 
-      <div className="p-5 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
         <Field label="Designation" value={employee.designation} />
         <Field label="Department" value={employee.department} />
         <Field label="Email" value={employee.email} />
@@ -48,10 +48,16 @@ export default function EmployeeCard({ employee }) {
 }
 
 function Field({ label, value, full }) {
+  const isEmail = label === "Email";
   return (
-    <div className={full ? "col-span-2" : ""}>
+    <div className={`${full ? "sm:col-span-2" : ""} min-w-0`}>
       <p className="text-slate-400 text-xs uppercase tracking-wide">{label}</p>
-      <p className="text-slate-800">{value || "-"}</p>
+      <p
+        className={`text-slate-800 mt-1 leading-5 ${isEmail ? "break-all sm:break-words" : "break-words"}`}
+        title={value || "-"}
+      >
+        {value || "-"}
+      </p>
     </div>
   );
 }
