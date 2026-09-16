@@ -1,17 +1,6 @@
 import { Manrope } from "next/font/google";
 import "./globals.css";
-import Navbar from "./Components/Navbar";
-import Footer from "./Components/Footer";
-
-// const geistSans = Geist({
-//   variable: "--font-geist-sans",
-//   subsets: ["latin"],
-// });
-
-// const geistMono = Geist_Mono({
-//   variable: "--font-geist-mono",
-//   subsets: ["latin"],
-// });
+import SiteChrome from "./Components/SiteChrome";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -20,13 +9,17 @@ const manrope = Manrope({
 });
 
 export const metadata = {
-   metadataBase: new URL("https://yourdomain.com"),
-   title: {
+  metadataBase: new URL("https://yourdomain.com"),
+
+  title: {
     default: "A-One Automation",
     template: "%s | A-One Automation",
   },
-description: "Industrial Automation Company providing PLC Programming, SCADA, HMI, Electrical Panel Design and Commissioning Services.",
- keywords: [
+
+  description:
+    "Industrial Automation Company providing PLC Programming, SCADA, HMI, Electrical Panel Design and Commissioning Services.",
+
+  keywords: [
     "Industrial Automation",
     "PLC Programming",
     "SCADA",
@@ -44,12 +37,11 @@ description: "Industrial Automation Company providing PLC Programming, SCADA, HM
     follow: true,
   },
 
-
   alternates: {
     canonical: "/",
   },
 
-   openGraph: {
+  openGraph: {
     title: "A-One Automation",
     description:
       "Industrial Automation Solutions for Manufacturing Industries.",
@@ -68,20 +60,18 @@ description: "Industrial Automation Company providing PLC Programming, SCADA, HM
     ],
   },
 
-   twitter: {
+  twitter: {
     card: "summary_large_image",
     title: "A-One Automation",
     description:
       "Industrial Automation Solutions for Manufacturing Industries.",
-
     images: ["/og-image.jpg"],
   },
 
-    icons: {
+  icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
-
 };
 
 export default function RootLayout({ children }) {
@@ -89,10 +79,10 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       className={`${manrope.variable} h-full antialiased`}
-    > 
-    
-      <body className="min-h-full flex flex-col"> <Navbar /> {children} <Footer /></body>
-    
+    >
+      <body className="min-h-full flex flex-col">
+        <SiteChrome>{children}</SiteChrome>
+      </body>
     </html>
   );
 }
