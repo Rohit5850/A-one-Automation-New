@@ -2,7 +2,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "./dbConnect";
 import User from "@/app/models/User";
-import { normalizeEmail, normalizeIndianPhone, toE164Indian } from "@/app/lib/identityValidation";
+import { normalizeEmail, normalizeIndianPhone } from "@/app/lib/identityValidation";
+import { assertMsg91PhoneMatches, verifyMsg91AccessToken } from "@/app/lib/msg91";
 
 async function publicUser(user) {
   return {
@@ -36,23 +37,21 @@ const providers = [
   }),
   CredentialsProvider({
     id: "mobile-otp", name: "Mobile OTP",
-    credentials: { phone: { label: "Mobile", type: "text" }, code: { label: "OTP", type: "text" } },
+    credentials: { phone: { label: "Mobile", type: "text" }, accessToken: { label: "MSG91 Access Token", type: "text" } },
     async authorize(credentials) {
       const phone = normalizeIndianPhone(credentials?.phone || "");
-      const code = String(credentials?.code || "").trim();
-      const e164 = toE164Indian(phone);
-      if (!e164 || !/^\d{4,10}$/.test(code)) throw new Error("Invalid mobile or OTP");
+      const accessToken = String(credentials?.accessToken || "").trim();
+      if (!/^[6-9]\d{9}$/.test(phone) || !accessToken) throw new Error("Invalid mobile verification");
+
+      // Do not trust a browser-side OTP success alone. MSG91's one-time access
+      // token is verified again from the server and must belong to this phone.
+      const verification = await verifyMsg91AccessToken(accessToken);
+      assertMsg91PhoneMatches(verification, phone);
+
       await dbConnect();
       const user = await User.findOne({ phone, isActive: true });
       if (!user) throw new Error("This mobile number is not registered");
       if (user.isLocked) throw new Error("ACCOUNT_LOCKED");
-      const sid = process.env.TWILIO_ACCOUNT_SID, token = process.env.TWILIO_AUTH_TOKEN, service = process.env.TWILIO_VERIFY_SERVICE_SID;
-      if (!sid || !token || !service) throw new Error("Mobile OTP service is not configured");
-      const auth = Buffer.from(`${sid}:${token}`).toString("base64");
-      const body = new URLSearchParams({ To: e164, Code: code });
-      const verify = await fetch(`https://verify.twilio.com/v2/Services/${service}/VerificationCheck`, { method: "POST", headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" }, body });
-      const result = await verify.json().catch(() => ({}));
-      if (!verify.ok || result.status !== "approved") throw new Error("Invalid or expired OTP");
       return publicUser(user);
     },
   }),
