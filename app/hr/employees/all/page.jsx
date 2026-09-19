@@ -34,6 +34,7 @@ function AllEmployeesInner() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [department, setDepartment] = useState("");
 
   function load() {
     fetch("/api/employees")
@@ -45,6 +46,13 @@ function AllEmployeesInner() {
   useEffect(() => {
     load();
   }, []);
+
+  async function toggleWebAttendance(emp) {
+    const nextValue = !emp.webAttendanceEnabled;
+    const res = await fetch(`/api/employees/${emp._id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ webAttendanceEnabled: nextValue, fieldWorker: nextValue }) });
+    if (res.ok) setEmployees((list) => list.map((x) => x._id === emp._id ? { ...x, webAttendanceEnabled: nextValue, fieldWorker: nextValue } : x));
+    else alert("Web Check In/Out update nahi ho paya.");
+  }
 
   async function toggleEmployeeLocation(emp) {
     const nextValue = !emp.showLocationToEmployee;
@@ -70,6 +78,15 @@ function AllEmployeesInner() {
     }
   }
 
+
+  async function unlockEmployee(emp) {
+    if (!confirm(`${emp.fullName} ki ID unlock karke password Aone@123 reset karein?`)) return;
+    const res = await fetch(`/api/employees/${emp._id}/unlock`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return alert(data.error || "ID unlock nahi ho payi.");
+    alert(`${emp.fullName} ki ID unlock ho gayi. Password Aone@123 reset hua hai. Next login par password change required hoga.`);
+  }
+
   async function handleDelete(emp) {
     setOpenMenuId(null);
     if (
@@ -83,14 +100,15 @@ function AllEmployeesInner() {
     else alert("Delete nahi ho paya.");
   }
 
-  const active = employees.filter((e) => e.status !== "inactive");
+  const active = employees;
   const filtered = active.filter((e) => {
     const q = query.trim().toLowerCase();
+    if (department && e.department !== department) return false;
     if (!q) return true;
     return (
       e.fullName.toLowerCase().includes(q) ||
       e.employeeId.toLowerCase().includes(q) ||
-      (e.department || "").toLowerCase().includes(q)
+      false
     );
   });
 
@@ -106,7 +124,8 @@ function AllEmployeesInner() {
         </Link>
       </div>
 
-      <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-md px-3 py-2 max-w-sm">
+      <div className="grid sm:grid-cols-2 gap-3 max-w-2xl">
+      <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-md px-3 py-2">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-slate-400 shrink-0">
           <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
           <path d="M21 21l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -114,9 +133,11 @@ function AllEmployeesInner() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search"
+          placeholder="Name / EMP-ID"
           className="text-sm outline-none w-full"
         />
+      </div>
+      <select value={department} onChange={(e)=>setDepartment(e.target.value)} className="bg-white border border-slate-200 rounded-md px-3 py-2 text-sm"><option value="">All Departments</option>{["Automation","Sales","Electrical","HR"].map((d)=><option key={d}>{d}</option>)}</select>
       </div>
 
       <p className="text-xs text-slate-400">
@@ -170,7 +191,7 @@ function AllEmployeesInner() {
                 >
                   {initials(emp.fullName)}
                 </div>
-                <p className="font-medium text-slate-900">{emp.fullName}</p>
+                <div className="flex items-center gap-2 pr-7"><p className="font-medium text-slate-900">{emp.fullName}</p><span className={`text-[10px] font-bold ${emp.status === "inactive" ? "text-red-600" : "text-emerald-600"}`}>{emp.status === "inactive" ? "INACTIVE" : "ACTIVE"}</span></div>
                 <p className="text-sm text-slate-500 mb-3">{emp.designation || "-"}</p>
 
                 <div className="text-xs text-slate-500 space-y-1">
@@ -190,6 +211,11 @@ function AllEmployeesInner() {
                 </div>
               </Link>
 
+              <div className="mt-4 pt-3 border-t border-slate-100/80">
+                <button type="button" onClick={() => unlockEmployee(emp)} className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">ID Unlock / Reset Password</button>
+                <p className="mt-1 text-[10px] text-slate-400">Resets to Aone@123 and forces password change on next login.</p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3"><div><p className="text-xs font-medium text-slate-700">Web Check In/Out</p><p className="text-[11px] text-slate-400">Web attendance + GPS requirement</p></div><button type="button" onClick={()=>toggleWebAttendance(emp)} role="switch" aria-checked={!!emp.webAttendanceEnabled} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${emp.webAttendanceEnabled ? "bg-emerald-500" : "bg-slate-300"}`}><span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${emp.webAttendanceEnabled ? "translate-x-5" : "translate-x-0.5"}`}/></button></div>
               <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-slate-700">Employee Location View</p>

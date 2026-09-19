@@ -16,6 +16,7 @@ import {
   paidDaysFromSummary,
   roundMoney,
   salaryRateForMonth,
+  salaryComponentsForMonth,
   shiftMonth,
   summarizeAttendance,
   todayDateKey,
@@ -29,6 +30,19 @@ function daysInMonth(monthStr) {
 function nextMonthStart(monthStr) {
   const [y, m] = monthStr.split("-").map(Number);
   return new Date(Date.UTC(y, m, 1));
+}
+
+
+function leaveBreakdownFromDays(days = []) {
+  const breakdown = { earnedLeave: 0, cOff: 0, unpaidLeave: 0, sandwichUnpaid: 0 };
+  for (const day of days) {
+    const fraction = Math.min(1, Math.max(0, Number(day?.leaveFraction || 1)));
+    if (day?.status === "leave" && day?.leaveType === "earned") breakdown.earnedLeave += fraction;
+    else if (day?.status === "leave" && day?.leaveType === "comp-off") breakdown.cOff += fraction;
+    else if (day?.status === "leave" && day?.leaveType === "unpaid") breakdown.unpaidLeave += fraction;
+    else if (day?.status === "sandwich-unpaid") breakdown.sandwichUnpaid += 1;
+  }
+  return Object.fromEntries(Object.entries(breakdown).map(([key, value]) => [key, roundMoney(value)]));
 }
 
 function transactionMonth(txn) {
@@ -89,11 +103,14 @@ async function computeMonthPayroll(employee, targetMonth) {
       month: targetMonth,
       totalDays: daysInMonth(targetMonth),
       attendanceSummary: summarizeAttendance([]),
+      leaveBreakdown: leaveBreakdownFromDays([]),
       paidDaysEquivalent: 0,
       salaryRate: rate.amount,
       wageType: rate.wageType,
       dailyRate: rate.wageType === "monthly" ? roundMoney(rate.amount / daysInMonth(targetMonth)) : roundMoney(rate.amount),
       grossEarnings: 0,
+      salaryComponents: { basicSalary: 0, hra: 0, otherAllowance: 0, basicEarnings: 0, hraEarnings: 0, otherAllowanceEarnings: 0 },
+      attendanceDeduction: 0,
       bonus: 0,
       overtimeHours: 0,
       overtimePay: 0,
@@ -110,6 +127,7 @@ async function computeMonthPayroll(employee, targetMonth) {
     const totalDays = daysInMonth(month);
     const days = await buildMonthCalendar(employee._id, month);
     const attendanceSummary = summarizeAttendance(days);
+    const leaveBreakdown = leaveBreakdownFromDays(days);
     const paidDaysEquivalent = paidDaysFromSummary(attendanceSummary);
     const rate = salaryRateForMonth(employee, month);
     const dailyRate =
@@ -117,12 +135,26 @@ async function computeMonthPayroll(employee, targetMonth) {
         ? roundMoney(rate.amount / totalDays)
         : roundMoney(rate.amount);
     const grossEarnings = roundMoney(dailyRate * paidDaysEquivalent);
+    const salaryComponents = salaryComponentsForMonth(employee, month);
+    const attendanceFactor = rate.wageType === "monthly" && Number(rate.amount || 0) > 0
+      ? Math.min(1, Math.max(0, grossEarnings / Number(rate.amount || 0)))
+      : 0;
+    const componentEarnings = rate.wageType === "monthly"
+      ? {
+          basicSalary: salaryComponents.basicSalary,
+          hra: salaryComponents.hra,
+          otherAllowance: salaryComponents.otherAllowance,
+          basicEarnings: roundMoney(salaryComponents.basicSalary * attendanceFactor),
+          hraEarnings: roundMoney(salaryComponents.hra * attendanceFactor),
+          otherAllowanceEarnings: roundMoney(salaryComponents.otherAllowance * attendanceFactor),
+        }
+      : { basicSalary: 0, hra: 0, otherAllowance: 0, basicEarnings: 0, hraEarnings: 0, otherAllowanceEarnings: 0 };
 
     const monthTxns = transactionMap.get(month) || [];
     const monthOvertime = overtimeMap.get(month) || [];
-    const overtimeHours = roundMoney(monthOvertime.reduce((sum, e) => sum + Number(e.hours || 0), 0));
-    const overtimePay = roundMoney(monthOvertime
-      .filter((e) => e.settlement === "pay")
+    const paidOvertimeEntries = monthOvertime.filter((e) => e.settlement === "pay");
+    const overtimeHours = roundMoney(paidOvertimeEntries.reduce((sum, e) => sum + Number(e.hours || 0), 0));
+    const overtimePay = roundMoney(paidOvertimeEntries
       .reduce((sum, e) => sum + Number(e.amount || 0), 0));
     let bonus = 0;
     let advance = 0;
@@ -167,11 +199,14 @@ async function computeMonthPayroll(employee, targetMonth) {
       month,
       totalDays,
       attendanceSummary,
+      leaveBreakdown,
       paidDaysEquivalent,
       salaryRate: rate.amount,
       wageType: rate.wageType,
       dailyRate,
       grossEarnings,
+      salaryComponents: componentEarnings,
+      attendanceDeduction: rate.wageType === "monthly" ? roundMoney(Number(rate.amount || 0) - grossEarnings) : 0,
       bonus,
       overtimeHours,
       overtimePay,
@@ -212,7 +247,7 @@ export async function GET(req, { params }) {
     }
 
     await dbConnect();
-    const employee = await Employee.findById(employeeId).select("+salary +salaryHistory");
+    const employee = await Employee.findById(employeeId).select("+salary +salaryHistory +basicSalary +hra +otherAllowance");
     if (!employee) return NextResponse.json({ error: "Employee not found" }, { status: 404 });
 
     const payroll = await computeMonthPayroll(employee, month);

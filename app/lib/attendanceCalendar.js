@@ -3,35 +3,8 @@ import Attendance from "@/app/models/Attendance";
 import Holiday from "@/app/models/Holiday";
 import Employee from "@/app/models/Employee";
 import LeaveRequest from "@/app/models/LeaveRequest";
-import { dateKeyFromDate, isPayrollCalendarDate, todayDateKey } from "@/app/lib/payrollRules";
-
-function sessionMetrics(existing) {
-  let sessions = Array.isArray(existing.sessions) ? existing.sessions : [];
-  if (sessions.length === 0 && existing.checkIn) {
-    sessions = [
-      {
-        checkIn: existing.checkIn,
-        checkOut: existing.checkOut,
-        checkInLocation: existing.checkInLocation,
-        checkOutLocation: existing.checkOutLocation,
-      },
-    ];
-  }
-
-  let workedMs = 0;
-  let breakMs = 0;
-  const sorted = [...sessions].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
-  sorted.forEach((s, index) => {
-    if (s.checkIn && s.checkOut) {
-      workedMs += Math.max(0, new Date(s.checkOut) - new Date(s.checkIn));
-    }
-    if (index > 0 && sorted[index - 1]?.checkOut && s.checkIn) {
-      breakMs += Math.max(0, new Date(s.checkIn) - new Date(sorted[index - 1].checkOut));
-    }
-  });
-
-  return { sessions: sorted, workedMs, breakMs };
-}
+import { applySundaySandwichRule, dateKeyFromDate, isPayrollCalendarDate, todayDateKey } from "@/app/lib/payrollRules";
+import { sessionMetrics } from "@/app/lib/attendanceMetrics";
 
 function* dateRange(fromDate, toDate) {
   let cursor = new Date(`${fromDate}T00:00:00Z`);
@@ -131,7 +104,8 @@ export async function buildMonthCalendar(employeeId, month) {
         date: dateStr,
         status: existing.status,
         reason: existing.reason || "",
-        leaveType: existing.status === "leave" ? leaveTypeMap.get(dateStr) || "unpaid" : null,
+        leaveType: existing.status === "leave" ? existing.leaveType || leaveTypeMap.get(dateStr) || "unpaid" : null,
+        leaveFraction: existing.status === "leave" ? Number(existing.leaveFraction || 1) : 1,
         checkIn: existing.checkIn,
         checkOut: existing.checkOut,
         checkInLocation: existing.checkInLocation,
@@ -149,5 +123,5 @@ export async function buildMonthCalendar(employeeId, month) {
     }
   }
 
-  return days;
+  return applySundaySandwichRule(days);
 }

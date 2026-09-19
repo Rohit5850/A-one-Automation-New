@@ -6,6 +6,7 @@ import Attendance from "@/app/models/Attendance";
 import Employee from "@/app/models/Employee";
 import { reverseGeocodeLocation } from "@/app/lib/reverseGeocode";
 import { todayDateKey } from "@/app/lib/payrollRules";
+import { automaticWorkStatus, sessionMetrics } from "@/app/lib/attendanceMetrics";
 
 function todayStr() {
   return todayDateKey();
@@ -24,27 +25,7 @@ function hideLocation(record) {
 
 function withSessionMetrics(record) {
   const obj = record?.toObject ? record.toObject() : { ...record };
-  let sessions = Array.isArray(obj.sessions) ? obj.sessions : [];
-  if (sessions.length === 0 && obj.checkIn) {
-    sessions = [{
-      checkIn: obj.checkIn,
-      checkOut: obj.checkOut,
-      checkInLocation: obj.checkInLocation,
-      checkOutLocation: obj.checkOutLocation,
-    }];
-  }
-  sessions = [...sessions].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
-  let workedMs = 0;
-  let breakMs = 0;
-  sessions.forEach((session, index) => {
-    if (session.checkIn && session.checkOut) {
-      workedMs += Math.max(0, new Date(session.checkOut) - new Date(session.checkIn));
-    }
-    if (index > 0 && sessions[index - 1]?.checkOut && session.checkIn) {
-      breakMs += Math.max(0, new Date(session.checkIn) - new Date(sessions[index - 1].checkOut));
-    }
-  });
-  return { ...obj, sessions, workedMs, breakMs };
+  return { ...obj, ...sessionMetrics(obj) };
 }
 function rawLocationFrom(body) {
   return body.location && typeof body.location.lat === "number" && typeof body.location.lng === "number"
@@ -74,7 +55,7 @@ function ensureLegacySession(record) {
 
 async function employeeLocationRule(targetEmployeeId) {
   const employee = await Employee.findById(targetEmployeeId).select(
-    "fieldWorker showLocationToEmployee status"
+    "fieldWorker webAttendanceEnabled showLocationToEmployee status"
   );
   if (!employee || employee.status !== "active") {
     return { error: "Employee account is inactive" };
@@ -85,6 +66,7 @@ async function employeeLocationRule(targetEmployeeId) {
   // to show in the employee attendance history.
   return {
     employee,
+    webAttendanceEnabled: employee.webAttendanceEnabled !== false,
     locationRequired: !!employee.fieldWorker || !!employee.showLocationToEmployee,
     canSeeLocation: !!employee.showLocationToEmployee,
   };
@@ -190,6 +172,7 @@ export async function POST(req) {
       const rule = await employeeLocationRule(targetEmployeeId);
       if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
       visibility = rule.canSeeLocation;
+      if (!rule.webAttendanceEnabled) return NextResponse.json({ error: "Web Check In/Out HR ne disable kiya hai" }, { status: 403 });
       if (rule.locationRequired && !rawLocation) {
         return NextResponse.json(
           { error: "Please select Allow for location. Only then Check-In or Check-Out is allowed." },
@@ -217,8 +200,12 @@ export async function POST(req) {
       if (!record.checkIn) record.checkIn = now;
       if (!record.checkInLocation && location) record.checkInLocation = location;
       record.checkOut = null; // day currently has an active session
-      record.status = body.status || "present";
-      if (record.status === "present") record.reason = "";
+      if (record.statusSource !== "manual") {
+        record.status = "pending";
+        record.statusSource = "auto";
+        record.reason = "";
+        record.leaveType = null;
+      }
       await record.save();
     } else {
       record = await Attendance.create({
@@ -226,7 +213,8 @@ export async function POST(req) {
         date,
         checkIn: now,
         checkOut: null,
-        status: body.status || "present",
+        status: "pending",
+        statusSource: "auto",
         checkInLocation: location,
         sessions: [{ checkIn: now, checkInLocation: location }],
       });
@@ -270,6 +258,7 @@ export async function PATCH(req) {
       const rule = await employeeLocationRule(targetEmployeeId);
       if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
       visibility = rule.canSeeLocation;
+      if (!rule.webAttendanceEnabled) return NextResponse.json({ error: "Web Check In/Out HR ne disable kiya hai" }, { status: 403 });
       if (rule.locationRequired && !rawLocation) {
         return NextResponse.json(
           { error: "Please select Allow for location. Only then Check-In or Check-Out is allowed." },
@@ -298,6 +287,13 @@ export async function PATCH(req) {
     if (location) activeSession.checkOutLocation = location;
     record.checkOut = now;
     if (location) record.checkOutLocation = location;
+    if (record.statusSource !== "manual") {
+      const metrics = sessionMetrics(record.toObject());
+      record.status = automaticWorkStatus(metrics.workedMs, false);
+      record.statusSource = "auto";
+      record.leaveType = null;
+      record.reason = "";
+    }
     await record.save();
 
     return NextResponse.json({

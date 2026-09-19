@@ -270,8 +270,7 @@ function AttendanceTab({ payrollData, loading }) {
     ["Present (P)", summary.present || 0, "text-emerald-700"],
     ["Absent (A)", summary.absent || 0, "text-red-700"],
     ["Half Day (HD)", summary.halfDay || 0, "text-amber-700"],
-    ["Paid Leave", Math.max(0, (summary.paidLeave || 0) - (summary.compOffLeave || 0)), "text-blue-700"],
-    ["C-Off", summary.compOffLeave || 0, "text-indigo-700"],
+    ["Paid Leave", summary.paidLeave || 0, "text-blue-700"],
     ["Unpaid Leave", summary.unpaidLeave || 0, "text-cyan-700"],
     ["Holiday", summary.holiday || 0, "text-purple-700"],
     ["Week Off", summary.weekOff || 0, "text-slate-500"],
@@ -279,7 +278,7 @@ function AttendanceTab({ payrollData, loading }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         {stats.map(([label, val, color]) => (
           <div key={label} className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-3 text-center">
             <p className={`text-xl font-semibold ${color}`}>{val}</p>
@@ -416,24 +415,37 @@ function PayrollTab({ payrollData, loading, loanOutstanding, month }) {
         <p className="text-sm font-medium text-slate-700">{monthLabel(month)}</p>
 
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Earnings</p>
-          <Row label="Paid Days" value={`${p.paidDaysEquivalent || 0} days`} />
+          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Salary & Attendance</p>
+          <Row label="Paid Days" value={`${p.paidDaysEquivalent || 0} / ${p.totalDays || 0}`} />
+          {p.wageType === "monthly" && <Row label="Monthly Gross" value={money(p.salaryRate)} />}
+          {p.wageType === "monthly" && <Row label="Basic Salary" value={money(p.salaryComponents?.basicSalary)} />}
+          {p.wageType === "monthly" && <Row label="HRA" value={money(p.salaryComponents?.hra)} />}
+          {p.wageType === "monthly" && <Row label="Other Allowance" value={money(p.salaryComponents?.otherAllowance)} />}
           <Row label="Attendance Earnings" value={money(p.grossEarnings)} />
+          {p.wageType === "monthly" && <Row label="Attendance / Absent Deduction" value={money(p.attendanceDeduction)} />}
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Leave Breakup</p>
+          <Row label="Earned Leave" value={`${p.leaveBreakdown?.earnedLeave || 0} day(s)`} />
+          <Row label="C-Off" value={`${p.leaveBreakdown?.cOff || 0} day(s)`} />
+          <Row label="Unpaid Leave" value={`${p.leaveBreakdown?.unpaidLeave || 0} day(s)`} />
+          <Row label="Sandwich Unpaid" value={`${p.leaveBreakdown?.sandwichUnpaid || 0} day(s)`} />
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Earnings</p>
           {p.bonus > 0 && <Row label="Bonus" value={money(p.bonus)} />}
           {p.overtimePay > 0 && <Row label={`Overtime Pay (${p.overtimeHours || 0} hrs)`} value={money(p.overtimePay)} />}
           <Row label="Gross Earnings" value={money(p.grossEarnings + p.bonus + (p.overtimePay || 0))} bold />
         </div>
 
         <div>
-          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Payments & Deductions</p>
-          {p.salaryPaid > 0 && <Row label="Salary Paid" value={money(p.salaryPaid)} />}
-          {p.advance > 0 && <Row label="Advance Paid" value={money(p.advance)} />}
-          {p.loanDeduction > 0 && <Row label="Loan EMI Deducted" value={money(p.loanDeduction)} />}
-          <Row
-            label="Gross Payments"
-            value={money(p.salaryPaid + p.advance + p.loanDeduction)}
-            bold
-          />
+          <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Payments</p>
+          <Row label="Salary Paid" value={money(p.salaryPaid)} />
+          <Row label="Advance Paid" value={money(p.advance)} />
+          <Row label="Loan EMI Deducted" value={money(p.loanDeduction)} />
+          <Row label="Gross Payments" value={money(p.salaryPaid + p.advance + p.loanDeduction)} bold />
         </div>
 
         <Row label="Previous Month Balance" value={money(p.previousBalance)} />
@@ -526,7 +538,7 @@ function DetailsTab({ employee, payroll, month }) {
     setSending(true);
     setMessage("");
     try {
-      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
+      const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
       await generateSalarySlipPdf(employee, payroll, month);
     } catch (err) {
       console.error(err);
@@ -567,7 +579,10 @@ function DetailsTab({ employee, payroll, month }) {
 
       <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-2">
         <p className="text-sm font-semibold text-slate-800 mb-2">Salary Detail</p>
-        <DetailRow label="Salary" value={`₹${employee.salary ?? "-"}`} />
+        <DetailRow label={employee.wageType === "daily" ? "Daily Wage" : "Monthly Gross"} value={`₹${employee.salary ?? "-"}`} />
+        {employee.wageType === "monthly" && <DetailRow label="Basic Salary" value={money(payroll?.salaryComponents?.basicSalary)} />}
+        {employee.wageType === "monthly" && <DetailRow label="HRA" value={money(payroll?.salaryComponents?.hra)} />}
+        {employee.wageType === "monthly" && <DetailRow label="Other Allowance" value={money(payroll?.salaryComponents?.otherAllowance)} />}
         <DetailRow label="Salary Type" value={employee.wageType === "daily" ? "Daily Wage" : "Monthly"} />
         <DetailRow
           label="Salary Cycle"

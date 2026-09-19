@@ -44,7 +44,7 @@ export function monthsBetween(startMonth, targetMonth) {
 }
 
 export function isPaidLeaveType(type) {
-  return type === "earned" || type === "paternity" || type === "comp-off";
+  return type === "earned" || type === "comp-off";
 }
 
 export function expectedLoanMonths(amount, monthlyDeduction) {
@@ -74,31 +74,29 @@ export function summarizeAttendance(days = []) {
     halfDay: 0,
     leave: 0,
     paidLeave: 0,
-    earnedLeave: 0,
-    paternityLeave: 0,
-    compOffLeave: 0,
     unpaidLeave: 0,
     absent: 0,
     holiday: 0,
     weekOff: 0,
+    sandwichUnpaid: 0,
   };
   for (const d of days) {
-    if (d.status === "present") summary.present++;
-    else if (d.status === "half-day") summary.halfDay++;
+    const fraction = d.status === "leave" ? Math.min(1, Math.max(0, Number(d.leaveFraction || 1))) : 1;
+    if (d.status === "present") summary.present += 1;
+    else if (d.status === "half-day") summary.halfDay += 1;
     else if (d.status === "leave") {
-      summary.leave++;
-      if (isPaidLeaveType(d.leaveType)) {
-        summary.paidLeave++;
-        if (d.leaveType === "earned") summary.earnedLeave++;
-        else if (d.leaveType === "paternity") summary.paternityLeave++;
-        else if (d.leaveType === "comp-off") summary.compOffLeave++;
-      } else {
-        summary.unpaidLeave++;
-      }
-    } else if (d.status === "absent") summary.absent++;
-    else if (d.status === "holiday") summary.holiday++;
-    else if (d.status === "week-off") summary.weekOff++;
+      summary.leave += fraction;
+      if (isPaidLeaveType(d.leaveType)) summary.paidLeave += fraction;
+      else summary.unpaidLeave += fraction;
+    } else if (d.status === "absent") summary.absent += 1;
+    else if (d.status === "holiday") summary.holiday += 1;
+    else if (d.status === "week-off") summary.weekOff += 1;
+    else if (d.status === "sandwich-unpaid") {
+      summary.sandwichUnpaid += 1;
+      summary.unpaidLeave += 1;
+    }
   }
+  Object.keys(summary).forEach((key) => { summary[key] = roundMoney(summary[key]); });
   return summary;
 }
 
@@ -110,6 +108,44 @@ export function paidDaysFromSummary(summary = {}) {
       Number(summary.weekOff || 0) +
       Number(summary.halfDay || 0) * 0.5
   );
+}
+
+export function salaryComponentsForMonth(employee = {}, month) {
+  const history = Array.isArray(employee.salaryHistory) ? employee.salaryHistory : [];
+  const applicable = history
+    .filter((item) => item?.effectiveMonth && compareMonths(item.effectiveMonth, month) <= 0)
+    .sort((a, b) => compareMonths(a.effectiveMonth, b.effectiveMonth));
+  const revision = applicable[applicable.length - 1];
+  const wageType = revision?.wageType || employee.wageType;
+  const amount = revision ? Number(revision.amount || 0) : Number(employee.salary || 0);
+  if (wageType !== "monthly") return { basicSalary: 0, hra: 0, otherAllowance: 0, grossSalary: amount };
+
+  const hasHistoricalBreakup = revision && [revision.basicSalary, revision.hra, revision.otherAllowance].some((v) => v !== undefined && v !== null);
+  const basicSalary = Number(hasHistoricalBreakup ? revision.basicSalary : employee.basicSalary || 0);
+  const hra = Number(hasHistoricalBreakup ? revision.hra : employee.hra || 0);
+  const otherAllowance = Number(hasHistoricalBreakup ? revision.otherAllowance : employee.otherAllowance || 0);
+  const componentTotal = roundMoney(basicSalary + hra + otherAllowance);
+  return {
+    basicSalary: roundMoney(basicSalary),
+    hra: roundMoney(hra),
+    otherAllowance: roundMoney(otherAllowance),
+    grossSalary: amount || componentTotal,
+  };
+}
+
+export function applySundaySandwichRule(days = []) {
+  const byDate = new Map(days.map((day) => [day.date, day]));
+  const isUnpaidBoundary = (day) =>
+    Boolean(day) && (day.status === "absent" || (day.status === "leave" && day.leaveType === "unpaid"));
+  return days.map((day) => {
+    if (day.status !== "week-off") return day;
+    const dt = new Date(`${day.date}T00:00:00Z`);
+    if (Number.isNaN(dt.getTime()) || dt.getUTCDay() !== 0) return day;
+    const previous = new Date(dt.getTime() - 86400000).toISOString().slice(0, 10);
+    const next = new Date(dt.getTime() + 86400000).toISOString().slice(0, 10);
+    if (!isUnpaidBoundary(byDate.get(previous)) || !isUnpaidBoundary(byDate.get(next))) return day;
+    return { ...day, status: "sandwich-unpaid", reason: "Sandwich Rule - Sunday unpaid" };
+  });
 }
 
 export function createLoanStates(loans = []) {

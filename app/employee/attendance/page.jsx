@@ -45,20 +45,6 @@ function fmtHMS(ms) {
 
 const ON_TIME_CUTOFF_HOUR = 10; // arrival before 10:00 AM counts as "On Time"
 
-function attendanceStatusLabel(day) {
-  if (!day) return "-";
-  if (day.status === "leave") {
-    if (day.leaveType === "comp-off") return "C-Off";
-    if (day.leaveType === "earned") return "Paid Leave";
-    if (day.leaveType === "paternity") return "Paternity Leave";
-    return "Unpaid Leave";
-  }
-  if (day.status === "half-day") return "Half Day";
-  if (day.status === "absent") return "Absent";
-  if (day.status === "present") return "Present";
-  return day.status || "-";
-}
-
 export default function EmployeeAttendancePage() {
   const [now, setNow] = useState(new Date());
   const [month, setMonth] = useState(currentMonthStr());
@@ -482,7 +468,7 @@ export default function EmployeeAttendancePage() {
             const isOff = d.status === "week-off" || d.status === "holiday";
             const eff = (d.workedMs || 0) > 0 ? fmtHM(d.workedMs) : null;
 
-            if (isOff) {
+            if (isOff && !(d.workedMs > 0)) {
               return (
                 <div
                   key={d.date}
@@ -519,36 +505,20 @@ export default function EmployeeAttendancePage() {
                       />
                     )}
                   </div>
-                  <p className={`text-xs font-medium mt-1 ${
-                    d.status === "absent" ? "text-red-600" :
-                    d.status === "leave" ? (d.leaveType === "unpaid" ? "text-rose-600" : "text-blue-600") :
-                    d.status === "half-day" ? "text-amber-600" : "text-emerald-600"
-                  }`}>{attendanceStatusLabel(d)}</p>
-                  {d.reason && <p className="text-xs text-slate-400 mt-0.5">{d.reason}</p>}
+                  {d.reason && <p className="text-xs text-slate-400 mt-1">{d.reason}</p>}
+                  {d.status === "absent" && (
+                    <p className="text-xs text-red-500 mt-1">Absent</p>
+                  )}
                 </div>
                 <span className="text-sm text-slate-700">{eff || "-"}</span>
                 <span className="text-sm text-amber-700">{(d.breakMs || 0) > 0 ? fmtHM(d.breakMs) : "-"}</span>
-                <span className="text-sm text-slate-700 space-y-0.5">
-                  {(d.sessions?.length ? d.sessions : [{ checkIn: d.checkIn }]).map((session, index) => (
-                    <div key={index}>{session.checkIn ? formatTime24(session.checkIn) : "-"}</div>
-                  ))}
-                </span>
-                <span className="text-sm text-slate-700 space-y-0.5">
-                  {(d.sessions?.length ? d.sessions : [{ checkOut: d.checkOut }]).map((session, index) => (
-                    <div key={index}>{session.checkOut ? formatTime24(session.checkOut) : "Working"}</div>
-                  ))}
-                </span>
+                <span className="text-sm font-medium text-slate-700">{d.checkIn ? formatTime24(d.checkIn) : "-"}</span>
+                <span className="text-sm font-medium text-slate-700">{d.checkOut ? formatTime24(d.checkOut) : (d.checkIn ? "Working" : "-")}</span>
                 {showLocationToEmployee && (
                   <div className="space-y-1 pr-2">
-                    {(d.sessions?.length ? d.sessions : [{ checkInLocation: d.checkInLocation, checkOutLocation: d.checkOutLocation }]).map((session, index) => (
-                      <div key={index} className="mb-1">
-                        <AttendanceLocation label="IN" loc={session.checkInLocation} />
-                        <AttendanceLocation label="OUT" loc={session.checkOutLocation} />
-                      </div>
-                    ))}
-                    {!d.checkInLocation && !d.checkOutLocation && !(d.sessions || []).some((s) => s.checkInLocation || s.checkOutLocation) && (
-                      <span className="text-xs text-slate-400">-</span>
-                    )}
+                    <AttendanceLocation label="IN" loc={d.checkInLocation} />
+                    <AttendanceLocation label="OUT" loc={d.checkOutLocation} />
+                    {!d.checkInLocation && !d.checkOutLocation && <span className="text-xs text-slate-400">-</span>}
                   </div>
                 )}
               </div>

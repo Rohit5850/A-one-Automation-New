@@ -147,17 +147,14 @@ export default function SalariesPage() {
                     <td className="px-4 py-3">{emp.department || "-"}</td>
                     <td className="px-4 py-3 capitalize">{emp.wageType || "-"}</td>
                     <td className="px-4 py-3">
-                      {editingId === emp._id ? (
-                        <input
-                          type="number"
-                          autoFocus
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1 text-sm w-28"
-                        />
-                      ) : (
-                        `₹${emp.salary ?? "-"}`
-                      )}
+                      {emp.wageType === "monthly" ? (
+                        <div>
+                          <p className="font-medium">₹{emp.salary ?? "-"}</p>
+                          <p className="text-[11px] text-slate-500">Basic ₹{emp.basicSalary || 0} · HRA ₹{emp.hra || 0} · Other ₹{emp.otherAllowance || 0}</p>
+                        </div>
+                      ) : editingId === emp._id ? (
+                        <input type="number" autoFocus value={editValue} onChange={(e) => setEditValue(e.target.value)} className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1 text-sm w-28" />
+                      ) : (`₹${emp.salary ?? "-"}`)}
                     </td>
                     <td className="px-4 py-3">
                       {editingId === emp._id ? (
@@ -178,12 +175,7 @@ export default function SalariesPage() {
                         </div>
                       ) : (
                         <div className="flex gap-3">
-                          <button
-                            onClick={() => startEdit(emp)}
-                            className="text-slate-700 text-xs font-medium hover:underline"
-                          >
-                            Edit
-                          </button>
+                          {emp.wageType !== "monthly" && <button onClick={() => startEdit(emp)} className="text-slate-700 text-xs font-medium hover:underline">Edit Rate</button>}
                           <Link
                             href={`/hr/employees/${emp._id}`}
                             className="text-slate-700 text-xs font-medium hover:underline"

@@ -5,9 +5,14 @@ import dbConnect from "@/app/lib/dbConnect";
 import Employee from "@/app/models/Employee";
 import Attendance from "@/app/models/Attendance";
 import Holiday from "@/app/models/Holiday";
+import { todayDateKey } from "@/app/lib/payrollRules";
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return todayDateKey();
+}
+
+function isIndiaSunday(dateKey) {
+  return new Date(`${dateKey}T00:00:00+05:30`).getDay() === 0;
 }
 
 // GET /api/dashboard-summary -> HR only. Today's snapshot across all active employees.
@@ -20,7 +25,7 @@ export async function GET() {
 
     await dbConnect();
     const today = todayStr();
-    const isSunday = new Date().getDay() === 0;
+    const isSunday = isIndiaSunday(today);
     const holiday = await Holiday.findOne({ date: today });
 
     const employees = await Employee.find({ status: "active" }).select("fullName employeeId");

@@ -10,8 +10,9 @@ export async function POST(req) {
     const e164 = toE164Indian(phone);
     if (!e164) return NextResponse.json({ error: "Valid 10-digit Indian mobile number enter karein" }, { status: 400 });
     await dbConnect();
-    const user = await User.findOne({ phone, isActive: true }).select("_id");
+    const user = await User.findOne({ phone, isActive: true }).select("_id isLocked");
     if (!user) return NextResponse.json({ error: "Ye mobile number kisi active account me registered nahi hai" }, { status: 404 });
+    if (user.isLocked) return NextResponse.json({ error: "ID locked hai. HR se unlock karwayein." }, { status: 423 });
     const sid = process.env.TWILIO_ACCOUNT_SID;
     const token = process.env.TWILIO_AUTH_TOKEN;
     const service = process.env.TWILIO_VERIFY_SERVICE_SID;

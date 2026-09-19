@@ -66,10 +66,10 @@ export async function computeLeaveBalance(employeeId) {
     Attendance.find({
       employee: employeeId,
       date: { $gte: yearStart, $lte: yearEnd },
-      status: "leave",
-    }).select("date status leaveType reason"),
+      leaveType: { $in: ["earned", "paternity", "unpaid"] },
+    }).select("date status leaveType leaveFraction reason"),
     OvertimeEntry.find({ employee: employeeId, settlement: "comp-off" }).select("date compOffDays"),
-    Attendance.find({ employee: employeeId, status: "leave" }).select("date status leaveType reason"),
+    Attendance.find({ employee: employeeId, leaveType: "comp-off" }).select("date status leaveType leaveFraction reason"),
     Holiday.find({ date: { $gte: yearStart, $lte: yearEnd } }).select("date"),
   ]);
 
@@ -85,12 +85,13 @@ export async function computeLeaveBalance(employeeId) {
     const isSunday = new Date(`${record.date}T00:00:00Z`).getUTCDay() === 0;
     if (isSunday || yearHolidaySet.has(record.date)) continue;
     const type = record.leaveType || "unpaid";
-    if (type === "earned") consumedEarned++;
-    else if (type === "paternity") consumedPaternity++;
-    else if (type === "unpaid") consumedUnpaid++;
+    const fraction = Number(record.leaveFraction || 1);
+    if (type === "earned") consumedEarned += fraction;
+    else if (type === "paternity") consumedPaternity += fraction;
+    else if (type === "unpaid") consumedUnpaid += fraction;
   }
 
-  const consumedCompOff = allCompOffLeaveRecords.filter((record) => record.leaveType === "comp-off").length;
+  const consumedCompOff = allCompOffLeaveRecords.filter((record) => record.leaveType === "comp-off").reduce((sum, record) => sum + Number(record.leaveFraction || 1), 0);
   // C-Off credits carry forward until used. No silent year-end expiry is applied.
   const compOffEarned = Math.round(compOffCredits.reduce((sum, e) => sum + Number(e.compOffDays || 0), 0) * 10) / 10;
 

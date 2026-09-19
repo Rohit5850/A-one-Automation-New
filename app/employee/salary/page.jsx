@@ -61,7 +61,7 @@ export default function EmployeeSalaryPage() {
     setSending(true);
     setSlipMessage("");
     try {
-      const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
+      const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
       await generateSalarySlipPdf(data.employee, data.payroll, month);
     } catch (err) {
       console.error(err);
@@ -107,32 +107,36 @@ export default function EmployeeSalaryPage() {
       ) : p ? (
         <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-4 max-w-xl">
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Earnings</p>
-            <Row label="Paid Days" value={`${p.paidDaysEquivalent || 0} days`} />
+            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Salary & Attendance</p>
+            <Row label="Paid Days" value={`${p.paidDaysEquivalent || 0} / ${p.totalDays || 0}`} />
+            {p.wageType === "monthly" && <Row label="Monthly Gross" value={money(p.salaryRate)} />}
+            {p.wageType === "monthly" && <Row label="Basic Salary" value={money(p.salaryComponents?.basicSalary)} />}
+            {p.wageType === "monthly" && <Row label="HRA" value={money(p.salaryComponents?.hra)} />}
+            {p.wageType === "monthly" && <Row label="Other Allowance" value={money(p.salaryComponents?.otherAllowance)} />}
             <Row label="Attendance Earnings" value={money(p.grossEarnings)} />
+            {p.wageType === "monthly" && <Row label="Attendance / Absent Deduction" value={money(p.attendanceDeduction)} />}
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Leave Breakup</p>
+            <Row label="Earned Leave" value={`${p.leaveBreakdown?.earnedLeave || 0} day(s)`} />
+            <Row label="C-Off" value={`${p.leaveBreakdown?.cOff || 0} day(s)`} />
+            <Row label="Unpaid Leave" value={`${p.leaveBreakdown?.unpaidLeave || 0} day(s)`} />
+            <Row label="Sandwich Unpaid" value={`${p.leaveBreakdown?.sandwichUnpaid || 0} day(s)`} />
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Earnings</p>
             {p.bonus > 0 && <Row label="Bonus" value={money(p.bonus)} />}
             {p.overtimePay > 0 && <Row label={`Overtime Pay (${p.overtimeHours || 0} hrs)`} value={money(p.overtimePay)} />}
             <Row label="Gross Earnings" value={money(p.grossEarnings + p.bonus + (p.overtimePay || 0))} bold />
           </div>
 
-          <div className="pt-3 border-t border-slate-100">
-            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Attendance Calculation</p>
-            <Row label="Present" value={`${p.attendanceSummary?.present || 0} days`} />
-            <Row label="Paid Leave" value={`${Math.max(0, (p.attendanceSummary?.paidLeave || 0) - (p.attendanceSummary?.compOffLeave || 0))} days`} />
-            <Row label="C-Off" value={`${p.attendanceSummary?.compOffLeave || 0} days`} />
-            <Row label="Half Day" value={`${p.attendanceSummary?.halfDay || 0} days × 0.5`} />
-            <Row label="Unpaid Leave" value={`${p.attendanceSummary?.unpaidLeave || 0} days`} />
-            <Row label="Absent" value={`${p.attendanceSummary?.absent || 0} days`} />
-            <Row label="Holiday + Week Off" value={`${(p.attendanceSummary?.holiday || 0) + (p.attendanceSummary?.weekOff || 0)} days`} />
-          </div>
-
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">
-              Payments & Deductions
-            </p>
-            {p.salaryPaid > 0 && <Row label="Salary Paid" value={money(p.salaryPaid)} />}
-            {p.advance > 0 && <Row label="Advance Paid" value={money(p.advance)} />}
-            {p.loanDeduction > 0 && <Row label="Loan EMI Deducted" value={money(p.loanDeduction)} />}
+            <p className="text-xs font-semibold text-slate-400 uppercase mb-1">Payments</p>
+            <Row label="Salary Paid" value={money(p.salaryPaid)} />
+            <Row label="Advance Paid" value={money(p.advance)} />
+            <Row label="Loan EMI Deducted" value={money(p.loanDeduction)} />
           </div>
 
           <Row label="Previous Month Balance" value={money(p.previousBalance)} />

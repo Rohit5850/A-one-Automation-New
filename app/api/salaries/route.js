@@ -16,7 +16,7 @@ export async function GET() {
 
     await dbConnect();
     const employees = await Employee.find({ status: "active" })
-      .select("employeeId fullName department designation salary wageType status")
+      .select("employeeId fullName department designation salary basicSalary hra otherAllowance wageType status")
       .sort({ fullName: 1 });
 
     return NextResponse.json({ employees });

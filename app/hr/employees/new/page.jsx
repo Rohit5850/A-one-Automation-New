@@ -1,178 +1,30 @@
 "use client";
-
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const initial = {
-  employeeId: "",
-  fullName: "",
-  username: "",
-  email: "",
-  phone: "",
-  gender: "",
-  designation: "",
-  department: "",
-  dateOfJoining: "",
-  wageType: "monthly",
-  salary: "",
-  fieldWorker: false,
-  address: "",
-  bloodGroup: "",
-  emergencyContact: "",
-  password: "",
-};
+const DEPARTMENTS = ["Automation", "Sales", "Electrical", "HR"];
+const DESIGNATIONS = ["Manager", "Assistant Manager", "Executive", "Junior", "Trainee"];
+const initial = { title:"", fullName:"", email:"", phone:"", gender:"", designation:"", department:"", reportingHead:"", dateOfJoining:"", wageType:"monthly", salary:"", basicSalary:"", hra:"", otherAllowance:"", address:"", bloodGroup:"", emergencyContact:"" };
 
 export default function NewEmployeePage() {
   const router = useRouter();
-  const [form, setForm] = useState(initial);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  function update(field, value) {
-    setForm((f) => ({ ...f, [field]: value }));
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    const res = await fetch("/api/employees", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    setLoading(false);
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Kuch galat ho gaya");
-      return;
-    }
-
-    router.push("/hr/dashboard");
-  }
-
-  const fields = [
-    ["employeeId", "Employee ID", "text"],
-    ["fullName", "Full Name", "text"],
-    ["username", "Unique Username (login ke liye)", "text"],
-    ["email", "Email (login / Google ke liye)", "email"],
-    ["password", "Initial Password", "text"],
-    ["phone", "Mobile Number", "tel"],
-    ["designation", "Designation", "text"],
-    ["department", "Department", "text"],
-    ["dateOfJoining", "Date of Joining", "date"],
-    ["bloodGroup", "Blood Group", "text"],
-    ["emergencyContact", "Emergency Contact", "text"],
-  ];
-
-  return (
-    <div className="py-10 px-4">
-      <form
-        onSubmit={handleSubmit}
-        className="max-w-lg mx-auto bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-8 space-y-4"
-      >
-        <h1 className="text-lg font-semibold text-slate-900">Add New Employee</h1>
-
-        {error && (
-          <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-            {error}
-          </div>
-        )}
-
-        {fields.map(([name, label, type]) => (
-          <div key={name} className="space-y-1">
-            <label className="text-sm font-medium text-slate-700">{label}</label>
-            <input
-              type={type}
-              required={["employeeId", "fullName", "username", "email", "phone", "password"].includes(name)}
-              value={form[name]}
-              maxLength={name === "phone" ? 10 : name === "username" ? 30 : undefined}
-              inputMode={name === "phone" ? "numeric" : undefined}
-              pattern={name === "phone" ? "[6-9][0-9]{9}" : name === "username" ? "[A-Za-z0-9][A-Za-z0-9._-]{3,29}" : undefined}
-              onChange={(e) => update(name, name === "phone" ? e.target.value.replace(/\D/g, "").slice(0, 10) : e.target.value)}
-              className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-            />
-          </div>
-        ))}
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">
-            Wage Type <span className="text-red-500">*</span>
-          </label>
-          <select
-            required
-            value={form.wageType}
-            onChange={(e) => update("wageType", e.target.value)}
-            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-          >
-            <option value="monthly">Monthly Salary</option>
-            <option value="daily">Daily Wage</option>
-          </select>
-          <p className="text-xs text-slate-400">
-            Ye decide karta hai attendance se salary kaise calculate hogi.
-          </p>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">
-            {form.wageType === "daily" ? "Per-day Rate (₹)" : "Monthly Salary (₹)"}
-          </label>
-          <input
-            type="number"
-            value={form.salary}
-            onChange={(e) => update("salary", e.target.value)}
-            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-          />
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">Gender</label>
-          <select
-            value={form.gender}
-            onChange={(e) => update("gender", e.target.value)}
-            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-          >
-            <option value="">Select</option>
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2 border border-slate-200 rounded-md px-3 py-2.5">
-          <input
-            type="checkbox"
-            id="fieldWorker"
-            checked={form.fieldWorker}
-            onChange={(e) => update("fieldWorker", e.target.checked)}
-            className="w-4 h-4"
-          />
-          <label htmlFor="fieldWorker" className="text-sm text-slate-700">
-            Field / Site Worker — check-in/out pe GPS location required hoga
-          </label>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-slate-700">Address</label>
-          <textarea
-            value={form.address}
-            onChange={(e) => update("address", e.target.value)}
-            className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-            rows={2}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 rounded-md py-2 text-sm font-medium hover:bg-slate-800 disabled:opacity-60"
-        >
-          {loading ? "Saving..." : "Create Employee"}
-        </button>
-      </form>
-    </div>
-  );
+  const [form,setForm]=useState(initial); const [heads,setHeads]=useState([]); const [error,setError]=useState(""); const [loading,setLoading]=useState(false);
+  useEffect(()=>{ fetch('/api/users').then(r=>r.json()).then(d=>setHeads((d.users||[]).filter(u=>u.role==='hr' && u.isActive!==false))).catch(()=>setHeads([])); },[]);
+  const gross=useMemo(()=>['basicSalary','hra','otherAllowance'].reduce((t,k)=>t+(Number(form[k])||0),0),[form.basicSalary,form.hra,form.otherAllowance]);
+  const update=(k,v)=>setForm(f=>({...f,[k]:v}));
+  async function submit(e){ e.preventDefault(); setError(''); setLoading(true); const payload={...form, salary:form.wageType==='monthly'?gross:form.salary}; const res=await fetch('/api/employees',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); const data=await res.json().catch(()=>({})); setLoading(false); if(!res.ok){setError(data.error||'Employee create nahi ho paya');return;} router.push('/hr/employees/all'); }
+  const moneyInput=(name,label)=><div className="space-y-1"><label className="text-sm font-medium text-slate-700">{label}</label><input required type="number" min="0" step="0.01" value={form[name]} onChange={e=>update(name,e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" /></div>;
+  return <div className="py-8 px-4"><form onSubmit={submit} className="max-w-2xl mx-auto bg-white/85 border rounded-2xl shadow-lg p-6 sm:p-8 space-y-4">
+    <div><h1 className="text-xl font-semibold">Add New Employee</h1><p className="text-xs text-slate-500 mt-1">Employee ID automatically AONE/EMP/001 format mein generate hoga. Initial password automatically Aone@123 rahega.</p></div>
+    {error&&<div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</div>}
+    <div className="grid sm:grid-cols-[130px_1fr] gap-3"><select value={form.title} onChange={e=>update('title',e.target.value)} className="rounded-xl border px-3 py-2 text-sm"><option value="">Title</option><option value="mr">Mr.</option><option value="mrs">Mrs.</option><option value="miss">Miss</option></select><input required placeholder="Full Name" value={form.fullName} onChange={e=>update('fullName',e.target.value)} className="rounded-xl border px-3 py-2 text-sm" /></div>
+    <div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-medium">Email</label><input required type="email" value={form.email} onChange={e=>update('email',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm" /></div><Phone label="Mobile Number" value={form.phone} set={v=>update('phone',v)} /><Phone label="Emergency Contact" value={form.emergencyContact} set={v=>update('emergencyContact',v)} /><div><label className="text-sm font-medium">Date of Joining</label><input type="date" value={form.dateOfJoining} onChange={e=>update('dateOfJoining',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm" /></div></div>
+    <div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-medium">Department</label><select required value={form.department} onChange={e=>update('department',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm"><option value="">Select Department</option>{DEPARTMENTS.map(x=><option key={x}>{x}</option>)}</select></div><div><label className="text-sm font-medium">Designation</label><select required value={form.designation} onChange={e=>update('designation',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm"><option value="">Select Designation</option>{DESIGNATIONS.map(x=><option key={x}>{x}</option>)}</select></div></div>
+    <div><label className="text-sm font-medium">Reporting Head (HR)</label><select required value={form.reportingHead} onChange={e=>update('reportingHead',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm"><option value="">Select Reporting Head</option>{heads.map(h=><option key={h._id} value={h._id}>{h.employee?.fullName ? `${h.employee.fullName} (${h.email})` : h.email}</option>)}</select></div>
+    <div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-medium">Wage Type</label><select value={form.wageType} onChange={e=>update('wageType',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm"><option value="monthly">Monthly Salary</option><option value="daily">Daily Wage</option></select></div><div><label className="text-sm font-medium">Gender</label><select value={form.gender} onChange={e=>update('gender',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm"><option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div></div>
+    {form.wageType==='monthly'?<><div className="grid sm:grid-cols-3 gap-4">{moneyInput('basicSalary','Basic Salary (₹)')}{moneyInput('hra','HRA (₹)')}{moneyInput('otherAllowance','Other Allowance (₹)')}</div><div className="rounded-xl bg-slate-50 border px-4 py-3"><span className="text-sm text-slate-500">Monthly Gross Salary</span><div className="font-semibold">₹{gross.toFixed(2)}</div></div></>:moneyInput('salary','Per-day Rate (₹)')}
+    <div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-medium">Blood Group</label><input value={form.bloodGroup} onChange={e=>update('bloodGroup',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm" /></div><div><label className="text-sm font-medium">Address</label><input value={form.address} onChange={e=>update('address',e.target.value)} className="w-full rounded-xl border px-3 py-2 text-sm" /></div></div>
+    <button disabled={loading} className="w-full rounded-xl bg-slate-900 text-white py-2.5 font-medium disabled:opacity-60">{loading?'Saving...':'Create Employee'}</button>
+  </form></div>;
 }
+function Phone({label,value,set}){ return <div><label className="text-sm font-medium">{label}</label><div className="flex rounded-xl border overflow-hidden bg-white"><span className="px-3 py-2 bg-slate-50 border-r text-sm">+91</span><input required inputMode="numeric" pattern="[6-9][0-9]{9}" maxLength={10} value={value} onChange={e=>set(e.target.value.replace(/\D/g,'').slice(0,10))} className="min-w-0 flex-1 px-3 py-2 text-sm outline-none" /></div></div> }

@@ -31,6 +31,12 @@ export default function EmployeeDashboard() {
           Go to Attendance
         </Link>
         <Link
+          href="/employee/miss-punch"
+          className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
+        >
+          Miss Punch Request
+        </Link>
+        <Link
           href="/employee/leave"
           className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
         >

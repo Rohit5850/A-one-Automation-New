@@ -1,591 +1,64 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
 import Link from "next/link";
 import EmployeeCard from "@/app/Components/EmployeeCard";
-
-function formatDuration(checkIn, checkOut) {
-  if (!checkIn || !checkOut) return "-";
-  const ms = new Date(checkOut) - new Date(checkIn);
-  if (ms <= 0) return "-";
-  const hours = Math.floor(ms / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  return `${hours}h ${minutes}m`;
-}
-
-function formatMs(ms) {
-  if (!ms || ms <= 0) return "-";
-  const hours = Math.floor(ms / 3600000);
-  const minutes = Math.floor((ms % 3600000) / 60000);
-  return `${hours}h ${minutes}m`;
-}
-
-// Converts a Date's local time into the "HH:MM" value <input type="time"> needs
-function toTimeInputValue(dateVal) {
-  if (!dateVal) return "";
-  return formatTime24(dateVal);
-}
+import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
 
 function indiaDateKey(value = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(value);
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
   const get = (type) => parts.find((p) => p.type === type)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
-
-function attendanceStatusLabel(record) {
-  if (!record) return "-";
-  if (record.status !== "leave") {
-    if (record.status === "half-day") return "Half Day";
-    return record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : "-";
+function fmtMs(ms) { if (!ms || ms <= 0) return "-"; const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000); return `${h}h ${m}m`; }
+function statusLabel(r) {
+  if (r?.status === "leave") {
+    if (r.leaveType === "earned") return "Paid Leave · Earned Leave";
+    if (r.leaveType === "comp-off") return `Paid Leave · C-Off ${Number(r.leaveFraction) === 0.5 ? "Half-Day" : "Full-Day"}`;
+    return "Unpaid Leave";
   }
-  if (record.leaveType === "comp-off") return "C-Off";
-  if (record.leaveType === "earned") return "Paid Leave";
-  if (record.leaveType === "paternity") return "Paternity Leave";
-  return "Unpaid Leave";
+  if (r?.status === "half-day") return "Half-Day";
+  if (r?.status === "pending") return "Pending";
+  return r?.status ? r.status.charAt(0).toUpperCase()+r.status.slice(1) : "-";
 }
-
-function manualStatusPayload(selection) {
-  if (selection === "paid-leave") return { status: "leave", leaveType: "earned" };
-  if (selection === "paternity-leave") return { status: "leave", leaveType: "paternity" };
-  if (selection === "comp-off") return { status: "leave", leaveType: "comp-off" };
-  if (selection === "unpaid-leave") return { status: "leave", leaveType: "unpaid" };
-  return { status: selection, leaveType: null };
-}
+function timeValue(v) { return v ? formatTime24(v) : ""; }
 
 export default function HRAttendancePage() {
-  const [allEmployees, setAllEmployees] = useState([]);
-  const [filterText, setFilterText] = useState("");
-  const [employee, setEmployee] = useState(null);
-  const [records, setRecords] = useState([]);
-  const [marking, setMarking] = useState(false);
-  const [message, setMessage] = useState("");
+  const [employees,setEmployees]=useState([]), [query,setQuery]=useState(""), [employee,setEmployee]=useState(null), [records,setRecords]=useState([]);
+  const [date,setDate]=useState(indiaDateKey()), [checkIn,setCheckIn]=useState(""), [checkOut,setCheckOut]=useState(""), [timeMsg,setTimeMsg]=useState(""), [savingTime,setSavingTime]=useState(false);
+  const [statusDate,setStatusDate]=useState(indiaDateKey()), [status,setStatus]=useState("present"), [paidType,setPaidType]=useState("earned"), [reason,setReason]=useState(""), [statusMsg,setStatusMsg]=useState(""), [savingStatus,setSavingStatus]=useState(false);
+  const today=indiaDateKey();
 
-  // Manual entry state
-  const [manualDate, setManualDate] = useState(indiaDateKey());
-  const [manualCheckIn, setManualCheckIn] = useState("");
-  const [manualCheckOut, setManualCheckOut] = useState("");
-  const [manualSaving, setManualSaving] = useState(false);
-  const [manualMessage, setManualMessage] = useState("");
+  useEffect(()=>{ fetch("/api/employees").then(r=>r.json()).then(d=>setEmployees((d.employees||[]).filter(e=>e.status==="active"))).catch(()=>setEmployees([])); },[]);
+  const filtered=useMemo(()=>{const q=query.trim().toLowerCase(); return !q?employees:employees.filter(e=>(e.fullName||"").toLowerCase().includes(q)||(e.employeeId||"").toLowerCase().includes(q));},[employees,query]);
+  function load(id){ fetch(`/api/attendance?employeeId=${id}`).then(r=>r.json()).then(d=>setRecords(d.records||[])); }
+  function choose(emp){ setEmployee(emp); setDate(today); setStatusDate(today); setTimeMsg(""); setStatusMsg(""); load(emp._id); }
+  useEffect(()=>{ const r=records.find(x=>x.date===date); setCheckIn(timeValue(r?.checkIn)); setCheckOut(timeValue(r?.checkOut)); },[date,records]);
 
-  // Leave / half-day / absent marking state
-  const [leaveDate, setLeaveDate] = useState(indiaDateKey());
-  const [leaveStatus, setLeaveStatus] = useState("paid-leave");
-  const [leaveReason, setLeaveReason] = useState("");
-  const [leaveSaving, setLeaveSaving] = useState(false);
-  const [leaveMessage, setLeaveMessage] = useState("");
-
-  useEffect(() => {
-    fetch("/api/employees")
-      .then((res) => res.json())
-      .then((data) => setAllEmployees((data.employees || []).filter((e) => e.status === "active")));
-  }, []);
-
-  const filteredEmployees = useMemo(() => {
-    const q = filterText.trim().toLowerCase();
-    if (!q) return allEmployees;
-    return allEmployees.filter(
-      (e) => e.fullName.toLowerCase().includes(q) || e.employeeId.toLowerCase().includes(q)
-    );
-  }, [allEmployees, filterText]);
-
-  function loadHistory(employeeMongoId) {
-    fetch(`/api/attendance?employeeId=${employeeMongoId}`)
-      .then((res) => res.json())
-      .then((data) => setRecords(data.records || []));
+  async function saveTime(){
+    if(!employee) return; if(!checkIn||!checkOut){setTimeMsg("Check-In aur Check-Out dono required hain.");return;} if(checkOut<=checkIn){setTimeMsg("Check-Out time, Check-In time se greater hona chahiye.");return;}
+    setSavingTime(true);setTimeMsg(""); const res=await fetch("/api/attendance/manual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employeeId:employee._id,date,checkIn,checkOut})}); const d=await res.json().catch(()=>({})); setSavingTime(false);
+    if(res.ok){setTimeMsg("Attendance time save ho gaya.");load(employee._id);}else setTimeMsg(d.error||"Attendance time save nahi hua.");
+  }
+  async function saveStatus(){
+    if(!employee)return; let payload={status,leaveType:null,leaveFraction:1};
+    if(status==="paid-leave") payload=paidType==="earned"?{status:"leave",leaveType:"earned",leaveFraction:1}:{status:"leave",leaveType:"comp-off",leaveFraction:paidType==="comp-off-half"?0.5:1};
+    if(status==="unpaid-leave") payload={status:"leave",leaveType:"unpaid",leaveFraction:1};
+    setSavingStatus(true);setStatusMsg(""); const res=await fetch("/api/attendance/manual",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({employeeId:employee._id,date:statusDate,...payload,reason})}); const d=await res.json().catch(()=>({})); setSavingStatus(false);
+    if(res.ok){setStatusMsg("Attendance status save ho gaya.");setReason("");load(employee._id);}else setStatusMsg(d.error||"Status save nahi hua.");
   }
 
-  function selectEmployee(emp) {
-    setEmployee(emp);
-    setMessage("");
-    setManualDate(indiaDateKey());
-    setManualCheckIn("");
-    setManualCheckOut("");
-    setManualMessage("");
-    setLeaveDate(indiaDateKey());
-    setLeaveStatus("paid-leave");
-    setLeaveReason("");
-    setLeaveMessage("");
-    loadHistory(emp._id);
-  }
+  return <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="flex items-end justify-between gap-4 flex-wrap"><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-500">Attendance Control</p><h1 className="text-2xl font-bold text-slate-900 mt-1">Mark Attendance</h1><p className="text-sm text-slate-500 mt-1">Employee time aur daily attendance status ko ek clean HR view se manage karein.</p></div><Link href="/hr/employees/all" className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-700 shadow-sm">All Employees</Link></div>
 
-  // Dates that already have a record for this employee - shown in the filter dropdown
-  const existingDates = useMemo(
-    () => [...records].map((r) => r.date).sort((a, b) => (a < b ? 1 : -1)),
-    [records]
-  );
+    {!employee ? <div className="space-y-4"><div className="bg-white/90 border border-white rounded-2xl shadow-sm p-4"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search by Employee Name / EMP-ID" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"/></div><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{filtered.map(emp=><button key={emp._id} onClick={()=>choose(emp)} className="text-left bg-white/90 border border-white rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-indigo-100 transition"><div className="flex items-center gap-3"><div className="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold">{(emp.fullName||"E").split(" ").map(n=>n[0]).join("").slice(0,2)}</div><div className="min-w-0"><p className="font-semibold text-slate-900 truncate">{emp.fullName}</p><p className="text-xs text-slate-500">{emp.employeeId}</p></div></div></button>)}{!filtered.length&&<p className="text-sm text-slate-400">No employee found.</p>}</div></div> : <>
+      <button onClick={()=>setEmployee(null)} className="text-sm font-medium text-indigo-600">← Select another employee</button><EmployeeCard employee={employee}/>
+      <div className="grid lg:grid-cols-2 gap-5">
+        <section className="bg-white/90 border border-white rounded-2xl shadow-sm p-5"><div className="mb-5"><p className="font-bold text-slate-900">Manual Check-In / Check-Out</p><p className="text-xs text-slate-500 mt-1">Single-day attendance time correction. Check-Out must be greater than Check-In.</p></div><div className="grid sm:grid-cols-3 gap-3"><label className="text-xs font-medium text-slate-600">Date<input type="date" max={today} value={date} onChange={e=>setDate(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label><label className="text-xs font-medium text-slate-600">Check-In<input type="time" value={checkIn} onChange={e=>setCheckIn(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label><label className="text-xs font-medium text-slate-600">Check-Out<input type="time" value={checkOut} onChange={e=>setCheckOut(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label></div>{timeMsg&&<p className={`text-xs mt-3 ${timeMsg.includes("save ho gaya")?"text-emerald-600":"text-red-600"}`}>{timeMsg}</p>}<button onClick={saveTime} disabled={savingTime} className="mt-4 rounded-xl bg-slate-900 text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{savingTime?"Saving...":"Save Attendance Time"}</button></section>
 
-  // Whenever the chosen date changes (typed or picked from the filter),
-  // pre-fill the manual time inputs from that date's existing record, if any.
-  useEffect(() => {
-    const existing = records.find((r) => r.date === manualDate);
-    setManualCheckIn(toTimeInputValue(existing?.checkIn));
-    setManualCheckOut(toTimeInputValue(existing?.checkOut));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manualDate, records]);
-
-  async function handleManualSave() {
-    if (!employee) return;
-    const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
-    if ((manualCheckIn && !hhmm.test(manualCheckIn)) || (manualCheckOut && !hhmm.test(manualCheckOut))) {
-      setManualMessage("Time 24-hour HH:MM format me enter karein, e.g. 18:30");
-      return;
-    }
-    setManualSaving(true);
-    setManualMessage("");
-    const res = await fetch("/api/attendance/manual", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employeeId: employee._id,
-        date: manualDate,
-        checkIn: manualCheckIn,
-        checkOut: manualCheckOut,
-      }),
-    });
-    setManualSaving(false);
-    if (res.ok) {
-      setManualMessage(`${formatDateDMY(manualDate)} ka time save ho gaya.`);
-      loadHistory(employee._id);
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setManualMessage(data.error || "Save nahi ho paya.");
-    }
-  }
-
-  const today = indiaDateKey();
-  const todayRecord = records.find((r) => r.date === today);
-  const todaySessions = todayRecord?.sessions?.length
-    ? todayRecord.sessions
-    : todayRecord?.checkIn
-      ? [{ checkIn: todayRecord.checkIn, checkOut: todayRecord.checkOut }]
-      : [];
-  const activeSession = [...todaySessions].reverse().find((s) => s.checkIn && !s.checkOut);
-
-  async function handleCheckIn() {
-    if (!employee) return;
-    setMarking(true);
-    setMessage("");
-    const res = await fetch("/api/attendance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeId: employee._id }),
-    });
-    setMarking(false);
-    if (res.ok) {
-      setMessage(`Check-in note ho gaya - ${formatTime24(new Date(), true)}`);
-      loadHistory(employee._id);
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setMessage(data.error || "Kuch galat ho gaya.");
-    }
-  }
-
-  async function handleCheckOut() {
-    if (!employee) return;
-    setMarking(true);
-    setMessage("");
-    const res = await fetch("/api/attendance", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeId: employee._id }),
-    });
-    setMarking(false);
-    if (res.ok) {
-      setMessage(`Check-out note ho gaya - ${formatTime24(new Date(), true)}`);
-      loadHistory(employee._id);
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setMessage(data.error || "Kuch galat ho gaya.");
-    }
-  }
-
-  async function handleReset() {
-    if (!employee || !todayRecord) return;
-    if (!confirm("Aaj ka check-in/check-out entry poori tarah reset karein?")) return;
-    setMarking(true);
-    setMessage("");
-    const res = await fetch(`/api/attendance/${todayRecord._id}`, { method: "DELETE" });
-    setMarking(false);
-    if (res.ok) {
-      setMessage("Reset ho gaya - dubara Check In kar sakte hain.");
-    } else {
-      setMessage("Reset nahi ho paya, dubara try karein.");
-    }
-    loadHistory(employee._id);
-  }
-
-  async function handleLeaveSave() {
-    if (!employee) return;
-    setLeaveSaving(true);
-    setLeaveMessage("");
-    const selected = manualStatusPayload(leaveStatus);
-    const res = await fetch("/api/attendance/manual", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employeeId: employee._id,
-        date: leaveDate,
-        status: selected.status,
-        leaveType: selected.leaveType,
-        reason: leaveReason,
-      }),
-    });
-    setLeaveSaving(false);
-    if (res.ok) {
-      setLeaveMessage(`${formatDateDMY(leaveDate)} ka status save ho gaya.`);
-      setLeaveReason("");
-      loadHistory(employee._id);
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setLeaveMessage(data.error || "Save nahi ho paya.");
-    }
-  }
-
-  return (
-    <div>
-      <div className="px-4 sm:px-6 pt-5 pb-3 flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">Mark Attendance</h1>
-        <Link
-          href="/hr/employees/all"
-          className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50"
-        >
-          All Employees
-        </Link>
+        <section className="bg-white/90 border border-white rounded-2xl shadow-sm p-5"><div className="mb-5"><p className="font-bold text-slate-900">Mark Attendance Status</p><p className="text-xs text-slate-500 mt-1">Only Present, Absent, Half-Day, Unpaid Leave and Paid Leave.</p></div><div className="grid sm:grid-cols-2 gap-3"><label className="text-xs font-medium text-slate-600">Date<input type="date" max={today} value={statusDate} onChange={e=>setStatusDate(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label><label className="text-xs font-medium text-slate-600">Status<select value={status} onChange={e=>setStatus(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"><option value="present">Present</option><option value="absent">Absent</option><option value="half-day">Half-Day</option><option value="unpaid-leave">Unpaid Leave</option><option value="paid-leave">Paid Leave</option></select></label></div>{status==="paid-leave"&&<div className="mt-3 rounded-xl bg-indigo-50 border border-indigo-100 p-3"><label className="text-xs font-semibold text-indigo-800">Paid Leave Type<select value={paidType} onChange={e=>setPaidType(e.target.value)} className="mt-1 w-full bg-white border border-indigo-200 rounded-xl px-3 py-2.5 text-sm text-slate-800"><option value="earned">Earned Leave</option><option value="comp-off-half">C-OFF (Half-Day)</option><option value="comp-off-full">C-OFF (Full-Day)</option></select></label></div>}<label className="block mt-3 text-xs font-medium text-slate-600">Reason / Note<input value={reason} onChange={e=>setReason(e.target.value)} placeholder="Optional note" className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label>{statusMsg&&<p className={`text-xs mt-3 ${statusMsg.includes("save ho gaya")?"text-emerald-600":"text-red-600"}`}>{statusMsg}</p>}<button onClick={saveStatus} disabled={savingStatus} className="mt-4 rounded-xl bg-indigo-600 text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{savingStatus?"Saving...":"Save Status"}</button></section>
       </div>
-
-      <main className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-        {!employee && (
-          <>
-            <input
-              type="text"
-              placeholder="Naam ya Employee ID se filter karein..."
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              className="w-full rounded-xl border border-slate-200/90 bg-white/85 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
-            />
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {filteredEmployees.map((emp) => (
-                <button
-                  key={emp._id}
-                  onClick={() => selectEmployee(emp)}
-                  className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_16px_42px_-28px_rgba(15,23,42,0.32)] p-3 text-left hover:border-slate-400 hover:shadow-sm transition"
-                >
-                  <div className="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-semibold mb-2">
-                    {emp.fullName
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </div>
-                  <p className="text-sm font-medium text-slate-900 truncate">{emp.fullName}</p>
-                  <p className="text-xs text-slate-500">{emp.employeeId}</p>
-                </button>
-              ))}
-              {filteredEmployees.length === 0 && (
-                <p className="col-span-full text-sm text-slate-400">Koi employee nahi mila.</p>
-              )}
-            </div>
-          </>
-        )}
-
-        {employee && (
-          <>
-            <button
-              onClick={() => setEmployee(null)}
-              className="text-sm text-slate-500 hover:text-slate-800"
-            >
-              ← Kisi aur employee ko select karein
-            </button>
-
-            <EmployeeCard employee={employee} />
-
-            <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-3">
-              <p className="text-sm text-slate-600">Aaj: {today}</p>
-              {message && <p className="text-sm text-emerald-600">{message}</p>}
-              <div className="flex gap-3 flex-wrap">
-                <button
-                  onClick={handleCheckIn}
-                  disabled={marking || !!activeSession}
-                  className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-50"
-                >
-                  {activeSession
-                    ? `Checked In (${formatTime24(activeSession.checkIn)})`
-                    : "Check In"}
-                </button>
-                <button
-                  onClick={handleCheckOut}
-                  disabled={marking || !activeSession}
-                  className="bg-white border border-slate-300 text-slate-800 text-sm px-4 py-2 rounded-md hover:bg-slate-50 disabled:opacity-50"
-                >
-                  {activeSession ? "Check Out" : "Check Out"}
-                </button>
-                {todayRecord?.checkIn && !activeSession && (
-                  <span className="text-xs text-slate-500 self-center">
-                    Worked: {formatMs(todayRecord.workedMs)} · Break: {formatMs(todayRecord.breakMs)}
-                  </span>
-                )}
-                <button
-                  onClick={handleReset}
-                  disabled={marking || !todayRecord}
-                  className="text-red-600 text-sm px-4 py-2 rounded-md border border-red-200 hover:bg-red-50 disabled:opacity-40"
-                >
-                  Reset Aaj Ka Time
-                </button>
-              </div>
-
-              <div className="pt-4 mt-2 border-t border-slate-100/80 space-y-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">Manual Entry (kisi bhi date ke liye)</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Time 24-hour HH:MM format me save hota hai. Check-out clock time Check-in se chhota/equal ho
-                    to system use next-day checkout maanta hai (e.g. 14:30 → 00:00 = 9h 30m).
-                  </p>
-                </div>
-                {manualMessage && (
-                  <p className={`text-sm ${manualMessage.includes("save ho gaya") ? "text-emerald-600" : "text-red-600"}`}>
-                    {manualMessage}
-                  </p>
-                )}
-                <div className="flex gap-3 flex-wrap items-end">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Date</label>
-                    <input
-                      type="date"
-                      value={manualDate}
-                      max={today}
-                      onChange={(e) => setManualDate(e.target.value)}
-                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                    />
-                  </div>
-
-                  {existingDates.length > 0 && (
-                    <div className="space-y-1">
-                      <label className="text-xs text-slate-500">Ya existing entry choose karein</label>
-                      <select
-                        value={existingDates.includes(manualDate) ? manualDate : ""}
-                        onChange={(e) => e.target.value && setManualDate(e.target.value)}
-                        className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                      >
-                        <option value="">-- Date select karein --</option>
-                        {existingDates.map((d) => (
-                          <option key={d} value={d}>
-                            {formatDateDMY(d)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Check-in Time</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="HH:MM (24-hour)"
-                      maxLength={5}
-                      value={manualCheckIn}
-                      onChange={(e) => setManualCheckIn(e.target.value)}
-                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Check-out Time</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="HH:MM (24-hour)"
-                      maxLength={5}
-                      value={manualCheckOut}
-                      onChange={(e) => setManualCheckOut(e.target.value)}
-                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleManualSave}
-                    disabled={manualSaving}
-                    className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
-                  >
-                    {manualSaving ? "Saving..." : "Save Time"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-4 mt-2 border-t border-slate-100/80 space-y-3">
-                <p className="text-sm font-medium text-slate-700">
-                  Mark Attendance Status
-                </p>
-                <p className="text-xs text-slate-400">
-                  Holiday aur Sunday (week-off) automatically lagte hain -{" "}
-                  <Link href="/hr/holidays" className="underline">
-                    Holiday Calendar yaha set karein
-                  </Link>
-                  . Paid Leave aur C-Off salary me paid day count honge; Unpaid Leave aur Absent ka salary day nahi banega; Half Day 0.5 paid day hoga.
-                </p>
-                {leaveMessage && (
-                  <p className={`text-sm ${leaveMessage.includes("save ho gaya") ? "text-emerald-600" : "text-red-600"}`}>{leaveMessage}</p>
-                )}
-                <div className="flex gap-3 flex-wrap items-end">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Date</label>
-                    <input
-                      type="date"
-                      value={leaveDate}
-                      onChange={(e) => setLeaveDate(e.target.value)}
-                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-500">Status</label>
-                    <select
-                      value={leaveStatus}
-                      onChange={(e) => setLeaveStatus(e.target.value)}
-                      className="border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                    >
-                      <option value="present">Present</option>
-                      <option value="half-day">Half Day (0.5 Paid Day)</option>
-                      <option value="paid-leave">Paid Leave / Earned Leave</option>
-                      <option value="paternity-leave">Paternity Leave (Paid)</option>
-                      <option value="comp-off">C-Off / Comp-Off (Paid)</option>
-                      <option value="unpaid-leave">Unpaid Leave</option>
-                      <option value="absent">Absent</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1 flex-1 min-w-[180px]">
-                    <label className="text-xs text-slate-500">Reason</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Sick leave, Personal work..."
-                      value={leaveReason}
-                      onChange={(e) => setLeaveReason(e.target.value)}
-                      className="w-full border border-slate-200/90 bg-white/85 rounded-xl shadow-sm px-2 py-1.5 text-sm"
-                    />
-                  </div>
-
-                  <button
-                    onClick={handleLeaveSave}
-                    disabled={leaveSaving}
-                    className="bg-gradient-to-r from-slate-900 to-slate-700 text-white shadow-lg shadow-slate-900/15 text-sm px-4 py-2 rounded-md hover:bg-slate-800 disabled:opacity-60"
-                  >
-                    {leaveSaving ? "Saving..." : "Save Status"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white/85 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-200">
-                <p className="font-semibold text-slate-900 text-sm">Attendance History</p>
-                <p className="text-xs text-slate-400 mt-0.5">Saved check-in/out, worked time, break, status aur location.</p>
-              </div>
-              <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-sm">
-                <thead className="bg-slate-50/80 text-slate-600 text-left">
-                  <tr>
-                    <th className="px-4 py-3 whitespace-nowrap">Date</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Check-in Time</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Check-out Time</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Worked Time</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Break Time</th>
-                    <th className="px-4 py-2">Status</th>
-                    <th className="px-4 py-2">Reason</th>
-                    <th className="px-4 py-3 min-w-[240px]">Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-6 text-center text-slate-400">
-                        Koi record nahi mila.
-                      </td>
-                    </tr>
-                  )}
-                  {records.map((r) => (
-                    <tr key={r._id} className="border-t border-slate-100/80">
-                      <td className="px-4 py-2">{formatDateDMY(r.date)}</td>
-                      <td className="px-4 py-2">
-                        {(r.sessions?.length ? r.sessions : [{ checkIn: r.checkIn }]).map((session, i) => (
-                          <div key={i}>{session.checkIn ? formatTime24(session.checkIn) : "-"}</div>
-                        ))}
-                      </td>
-                      <td className="px-4 py-2">
-                        {(r.sessions?.length
-                          ? r.sessions
-                          : r.checkIn
-                            ? [{ checkIn: r.checkIn, checkOut: r.checkOut }]
-                            : []
-                        ).length > 0 ? (
-                          (r.sessions?.length ? r.sessions : [{ checkIn: r.checkIn, checkOut: r.checkOut }]).map((session, i) => (
-                            <div key={i}>{session.checkOut ? formatTime24(session.checkOut) : "Working"}</div>
-                          ))
-                        ) : (
-                          <div>-</div>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">{formatMs(r.workedMs)}</td>
-                      <td className="px-4 py-2 text-amber-700">{formatMs(r.breakMs)}</td>
-                      <td className="px-4 py-2 font-medium whitespace-nowrap">{attendanceStatusLabel(r)}</td>
-                      <td className="px-4 py-2 text-slate-500">{r.reason || "-"}</td>
-                      <td className="px-4 py-2">
-                        {(r.sessions?.length ? r.sessions : [{ checkInLocation: r.checkInLocation, checkOutLocation: r.checkOutLocation }]).map((session, index) => (
-                          <div key={index} className="mb-1">
-                            <AttendanceLocation label="IN" loc={session.checkInLocation} />
-                            <AttendanceLocation label="OUT" loc={session.checkOutLocation} />
-                          </div>
-                        ))}
-                        {!r.checkInLocation && !r.checkOutLocation && !(r.sessions || []).some((session) => session.checkInLocation || session.checkOutLocation) && (
-                          <span className="text-xs text-slate-400">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </div>
-          </>
-        )}
-      </main>
-    </div>
-  );
-}
-
-
-function AttendanceLocation({ label, loc }) {
-  if (!loc || typeof loc.lat !== "number" || typeof loc.lng !== "number") return null;
-
-  const displayParts = (loc.displayName || "")
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const primary = loc.landmark || loc.placeName || loc.area || displayParts[0] || "Saved GPS location";
-  const structuredSecondary = [loc.area, loc.city, loc.district, loc.state]
-    .filter((v, i, arr) => v && arr.indexOf(v) === i)
-    .join(", ");
-  const secondary = structuredSecondary || displayParts.slice(1, 5).join(", ");
-
-  return (
-    <div className="text-xs leading-4 mb-1">
-      <span className="font-semibold text-slate-500 mr-1">{label}:</span>
-      <a
-        href={`https://www.google.com/maps?q=${loc.lat},${loc.lng}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 hover:underline"
-        title={loc.displayName || `${loc.lat}, ${loc.lng}`}
-      >
-        📍 {primary}
-      </a>
-      {secondary && <p className="text-slate-500 ml-7">{secondary}</p>}
-      {loc.postcode && <p className="text-slate-400 ml-7">PIN: {loc.postcode}</p>}
-    </div>
-  );
+      <section className="bg-white/90 border border-white rounded-2xl shadow-sm overflow-hidden"><div className="p-5 border-b border-slate-100"><p className="font-bold text-slate-900">Attendance History</p><p className="text-xs text-slate-500 mt-1">Saved daily time, worked hours, break and final status.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[780px] text-sm"><thead className="bg-slate-50 text-slate-500"><tr><th className="text-left px-4 py-3">Date</th><th className="text-left px-4 py-3">Check-In</th><th className="text-left px-4 py-3">Check-Out</th><th className="text-left px-4 py-3">Worked</th><th className="text-left px-4 py-3">Break</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Reason</th></tr></thead><tbody>{records.map(r=><tr key={r._id} className="border-t border-slate-100"><td className="px-4 py-3">{formatDateDMY(r.date)}</td><td className="px-4 py-3 font-medium">{r.checkIn?formatTime24(r.checkIn):"-"}</td><td className="px-4 py-3 font-medium">{r.checkOut?formatTime24(r.checkOut):(r.checkIn?"Working":"-")}</td><td className="px-4 py-3">{fmtMs(r.workedMs)}</td><td className="px-4 py-3">{fmtMs(r.breakMs)}</td><td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{statusLabel(r)}</span></td><td className="px-4 py-3 text-slate-500">{r.reason||"-"}</td></tr>)}{!records.length&&<tr><td colSpan="7" className="px-4 py-8 text-center text-slate-400">No attendance history.</td></tr>}</tbody></table></div></section>
+    </>}
+  </div>;
 }

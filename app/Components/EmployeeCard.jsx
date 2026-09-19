@@ -24,7 +24,7 @@ export default function EmployeeCard({ employee }) {
           </div>
         )}
         <div>
-          <p className="text-white font-semibold leading-tight">{employee.fullName}</p>
+          <p className="text-white font-semibold leading-tight">{employee.title ? `${employee.title === "mr" ? "Mr." : employee.title === "mrs" ? "Mrs." : "Miss"} ` : ""}{employee.fullName}</p>
           <p className="text-slate-300 text-xs">{employee.employeeId}</p>
         </div>
       </div>
@@ -38,7 +38,7 @@ export default function EmployeeCard({ employee }) {
           label="Date of Joining"
           value={employee.dateOfJoining ? formatDateDMY(employee.dateOfJoining) : "-"}
         />
-        <Field label="Status" value={employee.status} />
+        <div><p className="text-slate-400 text-xs uppercase tracking-wide">Status</p><p className={`mt-1 font-semibold ${employee.status === "inactive" ? "text-red-600" : "text-emerald-600"}`}>{employee.status === "inactive" ? "INACTIVE" : "ACTIVE"}</p></div>
         <Field label="Blood Group" value={employee.bloodGroup} />
         <Field label="Emergency Contact" value={employee.emergencyContact} />
         {employee.address && <Field label="Address" value={employee.address} full />}

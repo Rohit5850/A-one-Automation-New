@@ -5,7 +5,9 @@ import dbConnect from "@/app/lib/dbConnect";
 import OvertimeEntry from "@/app/models/OvertimeEntry";
 import Employee from "@/app/models/Employee";
 import Holiday from "@/app/models/Holiday";
+import Attendance from "@/app/models/Attendance";
 import { salaryRateForMonth, todayDateKey, roundMoney } from "@/app/lib/payrollRules";
+import { compOffCreditForWorkedMs, sessionMetrics } from "@/app/lib/attendanceMetrics";
 
 function daysInMonth(month) {
   const [y, m] = month.split("-").map(Number);
@@ -57,11 +59,10 @@ export async function POST(req) {
     const { employeeId, date, settlement, note } = body;
     const hours = Number(body.hours);
     const requestedRate = body.ratePerHour === "" || body.ratePerHour == null ? null : Number(body.ratePerHour);
-    const compOffDays = Number(body.compOffDays || 0);
+
 
     if (!employeeId || !/^\d{4}-\d{2}-\d{2}$/.test(date || "")) return NextResponse.json({ error: "Employee aur valid date required hai" }, { status: 400 });
     if (date > todayDateKey()) return NextResponse.json({ error: "Future date par overtime add nahi kar sakte" }, { status: 400 });
-    if (!Number.isFinite(hours) || hours <= 0 || hours > 24) return NextResponse.json({ error: "Overtime hours 0 se zyada aur 24 se kam/equal hone chahiye" }, { status: 400 });
     if (!["pay", "comp-off"].includes(settlement)) return NextResponse.json({ error: "Pay ya C-Off select karein" }, { status: 400 });
 
     await dbConnect();
@@ -77,25 +78,34 @@ export async function POST(req) {
     if (settlement === "comp-off" && !offDay.off) {
       return NextResponse.json({ error: "C-Off sirf Holiday ya Week Off par kiye gaye work ke liye credit ho sakta hai" }, { status: 400 });
     }
+    let offDayAttendance = null;
+    if (offDay.off) offDayAttendance = await Attendance.findOne({ employee: employeeId, date });
+    if (settlement === "comp-off" && !offDayAttendance) {
+      return NextResponse.json({ error: "C-Off credit ke liye Holiday/Week Off date ka attendance required hai" }, { status: 400 });
+    }
+    if (offDay.off) {
+      const existingSettlement = await OvertimeEntry.findOne({ employee: employeeId, date });
+      if (existingSettlement) return NextResponse.json({ error: "Is Holiday/Week Off date ka OT/C-Off settlement already decide ho chuka hai. Change ke liye existing entry delete karein." }, { status: 400 });
+    }
 
-    let ratePerHour = 0, amount = 0, creditedDays = 0;
+    let ratePerHour = 0, amount = 0, creditedDays = 0, settledHours = hours;
     if (settlement === "pay") {
+      if (!Number.isFinite(hours) || hours <= 0 || hours > 24) return NextResponse.json({ error: "Overtime hours 0 se zyada aur 24 se kam/equal hone chahiye" }, { status: 400 });
       const autoRate = Number(employee.overtimeRatePerHour || 0) > 0 ? Number(employee.overtimeRatePerHour) : autoHourlyRate(employee, date);
       ratePerHour = requestedRate != null ? requestedRate : autoRate;
       if (!Number.isFinite(ratePerHour) || ratePerHour < 0) return NextResponse.json({ error: "Valid overtime rate required hai" }, { status: 400 });
       amount = roundMoney(hours * ratePerHour);
     } else {
-      creditedDays = compOffDays;
-      if (![0.5, 1].includes(creditedDays)) return NextResponse.json({ error: "C-Off credit 0.5 ya 1 day hona chahiye" }, { status: 400 });
-      const sameDayCredits = await OvertimeEntry.find({ employee: employeeId, date, settlement: "comp-off" }).select("compOffDays");
-      const alreadyCredited = sameDayCredits.reduce((sum, e) => sum + Number(e.compOffDays || 0), 0);
-      if (alreadyCredited + creditedDays > 1) {
-        return NextResponse.json({ error: `Is date par maximum 1 C-Off day credit ho sakta hai. Already ${alreadyCredited} credited hai.` }, { status: 400 });
-      }
+      const metrics = sessionMetrics(offDayAttendance.toObject());
+      settledHours = Math.round((metrics.workedMs / 3600000) * 100) / 100;
+      creditedDays = compOffCreditForWorkedMs(metrics.workedMs);
+      if (!creditedDays) return NextResponse.json({ error: "C-Off ke liye minimum 4.5 worked hours required hain" }, { status: 400 });
+      // 4.5h to <9h = 0.5 C-Off; >=9h = 1 C-Off. Maximum one credit/day.
+      // Credit is derived from attendance, never manually typed.
     }
 
     const entry = await OvertimeEntry.create({
-      employee: employeeId, date, hours, settlement, ratePerHour, amount,
+      employee: employeeId, date, hours: settledHours, settlement, ratePerHour, amount,
       compOffDays: creditedDays, note: note || "", createdBy: session.user.id,
     });
     return NextResponse.json({ entry, offDay }, { status: 201 });

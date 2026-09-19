@@ -19,7 +19,7 @@ export default function OvertimePage() {
   const [employees, setEmployees] = useState([]);
   const [entries, setEntries] = useState([]);
   const [month, setMonth] = useState(currentMonth());
-  const [form, setForm] = useState({ employeeId: "", date: todayKey(), hours: "", settlement: "pay", ratePerHour: "", compOffDays: "1", note: "" });
+  const [form, setForm] = useState({ employeeId: "", date: todayKey(), hours: "", settlement: "pay", ratePerHour: "", note: "" });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -70,9 +70,9 @@ export default function OvertimePage() {
           <input type="date" max={todayKey()} value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="mt-1 w-full border rounded-md px-3 py-2"/>
           <span className="text-xs text-slate-400">Selected: {formatDateDMY(form.date)}</span>
         </label>
-        <label className="text-sm">Overtime Hours
+        {form.settlement === "pay" ? <label className="text-sm">Overtime Hours
           <input type="number" min="0.01" max="24" step="0.25" value={form.hours} onChange={e=>setForm({...form,hours:e.target.value})} placeholder="e.g. 2.5" className="mt-1 w-full border rounded-md px-3 py-2"/>
-        </label>
+        </label> : <div className="text-sm"><span className="block">C-Off Worked Hours</span><div className="mt-1 border rounded-md px-3 py-2 bg-slate-50 text-slate-600">Attendance se automatic</div><span className="text-xs text-slate-400">4.5–&lt;9h = 0.5 day, ≥9h = 1 day</span></div>}
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4">
@@ -85,18 +85,13 @@ export default function OvertimePage() {
         {form.settlement === "pay" ? <label className="text-sm">OT Rate / Hour (optional)
           <input type="number" min="0" step="0.01" value={form.ratePerHour} onChange={e=>setForm({...form,ratePerHour:e.target.value})} placeholder="Blank = auto salary rate ÷ 9" className="mt-1 w-full border rounded-md px-3 py-2"/>
           <span className="text-xs text-slate-400">Employee-wise rate; blank par salary se auto rate.</span>
-        </label> : <label className="text-sm">C-Off Credit
-          <select value={form.compOffDays} onChange={e=>setForm({...form,compOffDays:e.target.value})} className="mt-1 w-full border rounded-md px-3 py-2">
-            <option value="0.5">0.5 Day</option><option value="1">1 Day</option>
-          </select>
-          <span className="text-xs text-slate-400">Sirf Holiday / Week Off work ke liye.</span>
-        </label>}
+        </label> : <div className="text-sm"><span className="block">C-Off Credit</span><div className="mt-1 border rounded-md px-3 py-2 bg-slate-50 text-slate-600">Attendance hours se automatic</div><span className="text-xs text-slate-400">Sirf Holiday / Sunday work ke liye.</span></div>}
         <label className="text-sm">Note
           <input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Work details" className="mt-1 w-full border rounded-md px-3 py-2"/>
         </label>
       </div>
       {message && <p className={`text-sm ${message.includes("nahi") || message.includes("sirf") ? "text-red-600":"text-emerald-700"}`}>{message}</p>}
-      <button disabled={saving || !form.employeeId || !form.hours} onClick={save} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 rounded-md px-4 py-2 text-sm disabled:opacity-50">{saving?"Saving...":"Add Overtime"}</button>
+      <button disabled={saving || !form.employeeId || (form.settlement === "pay" && !form.hours)} onClick={save} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 rounded-md px-4 py-2 text-sm disabled:opacity-50">{saving?"Saving...":"Add Overtime"}</button>
     </div>
 
     <div className="flex justify-between items-center">

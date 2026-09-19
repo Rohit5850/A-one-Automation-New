@@ -58,12 +58,14 @@ export default async function middleware(req) {
   if (requiredRole) {
     const roleToken = await getRoleToken(req, requiredRole);
     if (roleToken?.role === requiredRole) {
+      if (roleToken.mustChangePassword) return NextResponse.redirect(new URL("/auth/change-password", req.url));
       return withRoleCookie(req, requiredRole);
     }
 
     // Backward-compatible fallback for a session created before this update.
     const defaultToken = await getDefaultToken(req);
     if (defaultToken?.role === requiredRole) {
+      if (defaultToken.mustChangePassword) return NextResponse.redirect(new URL("/auth/change-password", req.url));
       return NextResponse.next();
     }
 
@@ -86,6 +88,7 @@ export const config = {
     "/api/attendance/:path*",
     "/api/me/:path*",
     "/api/leave-requests/:path*",
+    "/api/miss-punch-requests/:path*",
     "/api/leave-balance/:path*",
     "/api/my-calendar/:path*",
     "/api/dashboard-summary/:path*",
@@ -95,6 +98,7 @@ export const config = {
     "/api/transactions/:path*",
     "/api/salaries/:path*",
     "/api/payroll/:path*",
+    "/api/overtime/:path*",
     "/api/users/:path*",
   ],
 };
