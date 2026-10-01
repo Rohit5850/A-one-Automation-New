@@ -24,6 +24,7 @@ export default function LoginPage() {
     const [sdkLoaded, setSdkLoaded] = useState(false);
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [step, setStep] = useState("identifier");
     const [mode, setMode] = useState("account");
     const [phone, setPhone] = useState("");
@@ -190,7 +191,7 @@ export default function LoginPage() {
     return (<>
       <Script id="msg91-otp-sdk" src="https://verify.msg91.com/otp-provider.js" strategy="afterInteractive" onLoad={() => setSdkLoaded(true)} onReady={() => setSdkLoaded(true)} onError={() => setError("MSG91 OTP service load nahi ho payi.")}/>
       <main className="min-h-screen lg:h-screen grid lg:grid-cols-[minmax(0,1fr)_540px] bg-white overflow-auto lg:overflow-hidden">
-        <section className="hidden lg:block relative bg-cover bg-center" style={{ backgroundImage: "url('/login-landscape.png')" }}><div className="absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-sky-900/5"/></section>
+        <section className="hidden lg:block relative bg-cover bg-center" style={{ backgroundImage: "url('/login-landscape.svg')" }}><div className="absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-sky-900/5"/></section>
         <section className="min-h-screen lg:min-h-0 flex items-center justify-center px-6 sm:px-12 py-10 bg-white">
           <div className="w-full max-w-[390px]">
             <div className="lg:hidden mb-10 flex items-center gap-3"><div className="h-11 w-11 rounded-xl bg-[#6546c7] text-white flex items-center justify-center font-black text-xl">A</div><div><div className="font-semibold text-slate-900">A-One Automation</div><div className="text-xs text-slate-500">Employee Workspace</div></div></div>
@@ -199,7 +200,14 @@ export default function LoginPage() {
 
             {mode === "account" ? (<form onSubmit={loginPassword} className="space-y-3">
                 <input autoFocus value={identifier} onChange={(e) => setIdentifier(e.target.value)} disabled={step === "password"} className="w-full h-[58px] border border-slate-300 rounded px-4 outline-none focus:border-[#6546c7] focus:ring-1 focus:ring-[#6546c7] disabled:bg-slate-50" type="email" placeholder="Email"/>
-                {step === "password" && <input autoFocus type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[58px] border border-slate-300 rounded px-4 outline-none focus:border-[#6546c7] focus:ring-1 focus:ring-[#6546c7]" placeholder="Password"/>}
+                {step === "password" && (
+                  <div className="relative">
+                    <input autoFocus type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-[58px] border border-slate-300 rounded px-4 pr-12 outline-none focus:border-[#6546c7] focus:ring-1 focus:ring-[#6546c7]" placeholder="Password"/>
+                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute inset-y-0 right-0 px-4 text-slate-500 hover:text-slate-700" aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"}>
+                      <PasswordEyeIcon open={showPassword}/>
+                    </button>
+                  </div>
+                )}
                 <button disabled={loading} className="w-full h-[54px] rounded bg-[#5b46b9] hover:bg-[#513cac] text-white font-medium disabled:opacity-60">{loading ? "Please wait..." : step === "identifier" ? "Continue" : "Login"}</button>
                 {step === "password" && <><button type="button" onClick={() => { setStep("identifier"); setPassword(""); setError(""); }} className="w-full text-sm text-[#5b46b9] py-1">Use another account</button><a href="/auth/forgot-password" className="block text-center text-sm text-[#5b46b9] py-1">Forgot Password?</a></>}
               </form>) : (<form onSubmit={loginOtp} className="space-y-3">
@@ -216,4 +224,13 @@ export default function LoginPage() {
         </section>
       </main>
     </>);
+}
+
+
+function PasswordEyeIcon({ open }) {
+  return open ? (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3l18 18M10.6 10.7a2 2 0 002.7 2.7M9.9 4.2A10.7 10.7 0 0112 4c5.5 0 9 5 9 5a15.7 15.7 0 01-2.1 2.6M6.6 6.6C4.4 8 3 10 3 10s3.5 5 9 5c1.2 0 2.3-.2 3.3-.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  ) : (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12s3.5-5 9-5 9 5 9 5-3.5 5-9 5-9-5-9-5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="1.8"/></svg>
+  );
 }

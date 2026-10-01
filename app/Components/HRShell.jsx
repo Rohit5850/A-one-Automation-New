@@ -7,9 +7,12 @@ const NAV_ITEMS = [
     { href: "/hr/dashboard", label: "Home", icon: HomeIcon },
     { href: "/hr/employees/all", label: "Org", icon: OrgIcon },
     { href: "/hr/attendance", label: "Attendance", icon: ClockIcon },
+    { href: "/hr/holidays", label: "Holidays", icon: CalendarIcon },
     { href: "/hr/leave-requests", label: "Leave", icon: CalendarIcon },
+    { href: "/hr/miss-punch-requests", label: "Miss Punch", icon: ClockIcon },
     { href: "/hr/overtime", label: "OT / C-Off", icon: ClockIcon },
     { href: "/hr/salaries", label: "Finances", icon: WalletIcon },
+    { href: "/hr/payment-requests", label: "Payments", icon: WalletIcon },
     { href: "/hr/payroll-settings", label: "PF/ESIC", icon: WalletIcon },
     { href: "/hr/users", label: "Users", icon: UsersIcon },
 ];
