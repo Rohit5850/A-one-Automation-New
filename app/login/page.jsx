@@ -191,7 +191,7 @@ export default function LoginPage() {
     return (<>
       <Script id="msg91-otp-sdk" src="https://verify.msg91.com/otp-provider.js" strategy="afterInteractive" onLoad={() => setSdkLoaded(true)} onReady={() => setSdkLoaded(true)} onError={() => setError("MSG91 OTP service load nahi ho payi.")}/>
       <main className="min-h-screen lg:h-screen grid lg:grid-cols-[minmax(0,1fr)_540px] bg-white overflow-auto lg:overflow-hidden">
-        <section className="hidden lg:block relative bg-cover bg-center" style={{ backgroundImage: "url('/login-landscape.svg')" }}><div className="absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-sky-900/5"/></section>
+        <section className="hidden lg:block relative bg-cover bg-center" style={{ backgroundImage: "url('/login-landscape.png')" }}><div className="absolute inset-0 bg-gradient-to-t from-slate-950/10 via-transparent to-sky-900/5"/></section>
         <section className="min-h-screen lg:min-h-0 flex items-center justify-center px-6 sm:px-12 py-10 bg-white">
           <div className="w-full max-w-[390px]">
             <div className="lg:hidden mb-10 flex items-center gap-3"><div className="h-11 w-11 rounded-xl bg-[#6546c7] text-white flex items-center justify-center font-black text-xl">A</div><div><div className="font-semibold text-slate-900">A-One Automation</div><div className="text-xs text-slate-500">Employee Workspace</div></div></div>
