@@ -155,14 +155,14 @@ export default function HeroSection() {
               </span>
             </div>
 
-            <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
-              Smart Industrial
-              <br />
-              <span className="text-blue-400">Automation Solutions</span>
+            <h1 className="text-3xl font-bold leading-tight md:text-3xl lg:text-4xl">
+               <span className="text-blue-400"> Industrial Automation Solutions </span> <br />In Pithampur & Indore
             </h1>
 
             <p className="max-w-xl text-lg leading-relaxed text-slate-300">
-              A-One Automation Solutions specializes in PLC Programming, SCADA Development, HMI Design, VFD Commissioning, Control Panel Manufacturing, and Industrial Electrical Solutions. We help industries improve productivity, efficiency, and process reliability through advanced automation technologies.
+              A-ONE Automation Solutions provides industrial automation, PLC programming,
+  HMI, SCADA, VFD, control panel and machine automation services for industries
+  in Pithampur, Indore and across Madhya Pradesh.
             </p>
 
             <div className="flex flex-col gap-4 pt-4 sm:flex-row">

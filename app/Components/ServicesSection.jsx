@@ -15,6 +15,7 @@ export default function ServicesSection() {
     {
       id: 1,
       title: "Control Panel Manufacturing",
+      href: "/control-panel-manufacturing",
       description:
         "Custom-designed control panels including Fire Fighting Panels, APFC Panels, VFD Panels and Industrial PLC Control Panels.",
       image: "/images/img-1.jpg",
@@ -24,6 +25,7 @@ export default function ServicesSection() {
     {
       id: 2,
       title: "PLC Programming & Automation",
+      href: "/plc-programming",
       description:
         "Advanced PLC programming and complete automation solutions using Siemens, Delta and Mitsubishi PLCs.",
       image: "/images/img-2.jpg",
@@ -33,6 +35,7 @@ export default function ServicesSection() {
     {
       id: 3,
       title: "VFD & Drive Services",
+       href: "/vfd-services",
       description:
         "Installation, programming, troubleshooting and maintenance of Variable Frequency Drives.",
       image: "/images/img-3.webp",
@@ -42,6 +45,7 @@ export default function ServicesSection() {
     {
       id: 4,
       title: "HMI Solutions",
+        href: "/hmi-programming",
       description:
         "Delta, Weintek, Siemens and DOP HMI programming for industrial automation systems.",
       image: "/images/img-4.jpg",
@@ -50,18 +54,20 @@ export default function ServicesSection() {
     },
     {
       id: 5,
-      title: "PLC & VFD Repair",
+      title: "Industrial IoT",
+       href: "/industrial-iot",
       description:
-        "Professional repair services for PLCs, Servo Drives, HMIs and Variable Frequency Drives.",
+        "A-ONE Automation Solutions provides Industrial IoT solutions for PLC data monitoring, remote machine monitoring.",
       image: "/images/img-5.webp",
       icon: Wrench,
       tags: ["Industrial Maintenance", "Manufacturing Support"],
     },
     {
       id: 6,
-      title: "Electrical AMC Services",
+      title: "Industrial Networking",
+       href: "/industrial-networking",
       description:
-        "Annual Maintenance Contracts for electrical panels and industrial automation systems.",
+        "A-ONE Automation Solutions provides industrial networking and communication services including EtherNet/IP, PROFINET, Modbus TCP, Modbus RTU, PLC networking.",
       image: "/images/img-6.webp",
       icon: ShieldCheck,
       tags: ["Industrial Plants", "Commercial Complexes"],
@@ -75,7 +81,7 @@ export default function ServicesSection() {
 
         <div className="mb-16 text-center">
           <h2 className="text-[32px] font-bold text-secondary ">
-            Our <span className="text-primary">Services</span>
+            <span className="text-primary"> Industrial Automation </span> Services in Pithampur
           </h2>
 
           <p className="mx-auto mt-4 max-w-3xl text-[18px] text-gray-600">
@@ -91,8 +97,9 @@ export default function ServicesSection() {
             const Icon = service.icon;
 
             return (
-              <div
+              <Link
                 key={service.id}
+                 href={service.href}
                 className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-300 hover:-translate-y-2 hover:border-primary hover:shadow-2xl"
               >
                 {/* Image */}
@@ -134,7 +141,7 @@ export default function ServicesSection() {
                     ))}
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

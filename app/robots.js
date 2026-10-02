@@ -1,4 +1,3 @@
-
 export default function robots() {
   return {
     rules: {
@@ -6,6 +5,6 @@ export default function robots() {
       allow: "/",
     },
 
-    sitemap: "https://yourdomain.com/sitemap.xml",
+    sitemap: "https://aone-india.com/sitemap.xml",
   };
 }

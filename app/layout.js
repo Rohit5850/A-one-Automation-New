@@ -9,23 +9,25 @@ const manrope = Manrope({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://yourdomain.com"),
+  metadataBase: new URL("https://aone-india.com"),
 
   title: {
-    default: "A-One Automation",
-    template: "%s | A-One Automation",
+    default: "Industrial Automation Company in Pithampur | A-ONE Automation Solutions",
+    template: "%s | A-ONE Automation Solutions",
   },
 
   description:
     "Industrial Automation Company providing PLC Programming, SCADA, HMI, Electrical Panel Design and Commissioning Services.",
 
   keywords: [
-    "Industrial Automation",
-    "PLC Programming",
-    "SCADA",
-    "HMI",
-    "Automation Company",
-    "Electrical Panel",
+  "Industrial Automation Company in Pithampur",
+  "Industrial Automation Pithampur",
+  "PLC Programming Pithampur",
+  "SCADA Development Pithampur",
+  "HMI Programming Pithampur",
+  "Automation Company Pithampur",
+  "Electrical Control Panel Pithampur",
+  "Industrial Automation Indore",
   ],
 
   authors: [{ name: "A-One Automation" }],

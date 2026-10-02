@@ -1,7 +1,7 @@
 const pageBannerData = {
   title: {
-    normal: "Our",
-    highlight: " Services",
+    normal: "Industrial Automation",
+    highlight: " Services in Pithampur",
   },
 
   description:
