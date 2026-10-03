@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatDateDMY } from "@/lib/displayFormat";
+import { formatDateDMY } from "@/app/lib/displayFormat";
 
 const LEAVE_TYPE_LABELS = {
   earned: "Earned Leave",
