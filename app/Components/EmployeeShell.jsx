@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/employee/dashboard", label: "Home", icon: HomeIcon },
   { href: "/employee/attendance", label: "Attendance", icon: ClockIcon },
   { href: "/employee/leave", label: "Leave", icon: CalendarIcon },
+  { href: "/employee/miss-punch", label: "Miss Punch", icon: PunchIcon },
   { href: "/employee/salary", label: "Salary", icon: WalletIcon },
 ];
 
@@ -136,6 +137,15 @@ function CalendarIcon({ active }) {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
       <rect x="4" y="5" width="16" height="15" rx="2" stroke={c(active)} strokeWidth="1.8" />
       <path d="M4 10h16M8 3v4M16 3v4" stroke={c(active)} strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PunchIcon({ active }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M7 3h10v4H7zM6 7h12v14H6z" stroke={c(active)} strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M9 12h6M9 16h4" stroke={c(active)} strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

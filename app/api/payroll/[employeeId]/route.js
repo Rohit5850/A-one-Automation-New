@@ -21,12 +21,12 @@ function leaveBreakdownFromDays(days = []) {
     const breakdown = { earnedLeave: 0, cOff: 0, unpaidLeave: 0, sandwichUnpaid: 0 };
     for (const day of days) {
         const fraction = Math.min(1, Math.max(0, Number(day?.leaveFraction || 1)));
-        if (day?.status === "leave" && day?.leaveType === "earned")
-            breakdown.earnedLeave += fraction;
-        else if (day?.status === "leave" && day?.leaveType === "comp-off")
-            breakdown.cOff += fraction;
-        else if (day?.status === "leave" && day?.leaveType === "unpaid")
-            breakdown.unpaidLeave += fraction;
+        if (["leave", "half-day"].includes(day?.status) && day?.leaveType === "earned")
+            breakdown.earnedLeave += day.status === "half-day" ? Math.min(0.5, fraction) : fraction;
+        else if (["leave", "half-day"].includes(day?.status) && day?.leaveType === "comp-off")
+            breakdown.cOff += day.status === "half-day" ? Math.min(0.5, fraction) : fraction;
+        else if (["leave", "half-day"].includes(day?.status) && day?.leaveType === "unpaid")
+            breakdown.unpaidLeave += day.status === "half-day" ? Math.min(0.5, fraction) : fraction;
         else if (day?.status === "sandwich-unpaid")
             breakdown.sandwichUnpaid += 1;
     }

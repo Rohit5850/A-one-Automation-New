@@ -76,6 +76,8 @@ export async function computeLeaveBalance(employeeId) {
         const isSunday = new Date(`${record.date}T00:00:00Z`).getUTCDay() === 0;
         if (isSunday || yearHolidaySet.has(record.date))
             continue;
+        if (!["leave", "half-day"].includes(record.status))
+            continue;
         const type = record.leaveType || "unpaid";
         const fraction = Number(record.leaveFraction || 1);
         if (type === "earned")
@@ -85,7 +87,13 @@ export async function computeLeaveBalance(employeeId) {
         else if (type === "unpaid")
             consumedUnpaid += fraction;
     }
-    const consumedCompOff = allCompOffLeaveRecords.filter((record) => record.leaveType === "comp-off").reduce((sum, record) => sum + Number(record.leaveFraction || 1), 0);
+    const compOffDates = allCompOffLeaveRecords.map((record) => record.date).filter(Boolean);
+    const compOffHolidayRows = compOffDates.length ? await Holiday.find({ date: { $in: compOffDates } }).select("date") : [];
+    const compOffHolidaySet = new Set(compOffHolidayRows.map((h) => h.date));
+    const consumedCompOff = allCompOffLeaveRecords
+        .filter((record) => ["leave", "half-day"].includes(record.status))
+        .filter((record) => new Date(`${record.date}T00:00:00Z`).getUTCDay() !== 0 && !compOffHolidaySet.has(record.date))
+        .reduce((sum, record) => sum + Number(record.leaveFraction || 1), 0);
     // C-Off credits carry forward until used. No silent year-end expiry is applied.
     const compOffEarned = Math.round(compOffCredits.reduce((sum, e) => sum + Number(e.compOffDays || 0), 0) * 10) / 10;
     // Earned Leave: exactly 1 EL for each fully completed qualifying month.

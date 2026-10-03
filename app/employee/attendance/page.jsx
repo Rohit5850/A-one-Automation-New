@@ -40,6 +40,26 @@ function fmtHMS(ms) {
     return `${h}:${m}:${s}`;
 }
 const ON_TIME_CUTOFF_HOUR = 10; // arrival before 10:00 AM counts as "On Time"
+function attendanceStatusLabel(day) {
+    if (!day?.status) return "-";
+    const fraction = Number(day.leaveFraction || 1);
+    if (day.status === "leave") {
+        if (day.leaveType === "earned") return `Earned Leave${fraction === 0.5 ? " · Half-Day" : ""}`;
+        if (day.leaveType === "comp-off") return `C-Off${fraction === 0.5 ? " · Half-Day" : ""}`;
+        if (day.leaveType === "unpaid") return `Unpaid Leave${fraction === 0.5 ? " · Half-Day" : ""}`;
+        return "Leave";
+    }
+    if (day.status === "half-day") {
+        if (day.leaveType === "earned") return "Half-Day · Earned Leave";
+        if (day.leaveType === "comp-off") return "Half-Day · C-Off";
+        if (day.leaveType === "unpaid") return "Half-Day · Unpaid Leave";
+        return "Half-Day";
+    }
+    if (day.status === "present") return "Present";
+    if (day.status === "absent") return "Absent";
+    if (day.status === "pending") return "Pending";
+    return day.status;
+}
 export default function EmployeeAttendancePage() {
     const [now, setNow] = useState(new Date());
     const [month, setMonth] = useState(currentMonthStr());
@@ -414,6 +434,9 @@ export default function EmployeeAttendancePage() {
                   {formatDateDMY(d.date)}
                 </span>
                 <div className="pr-4">
+                  <span className={`inline-flex mb-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${d.status === "absent" ? "bg-red-50 text-red-600" : d.status === "leave" || d.leaveType ? "bg-indigo-50 text-indigo-700" : d.status === "half-day" ? "bg-amber-50 text-amber-700" : d.status === "present" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                    {attendanceStatusLabel(d)}
+                  </span>
                   <div className="h-2 rounded-full bg-slate-100 overflow-hidden w-full max-w-[240px]">
                     {d.checkIn && (<div className={`h-full rounded-full ${d.status === "leave" ? "bg-blue-400" : "bg-teal-400"}`} style={{ width: eff ? "70%" : "25%" }}/>)}
                   </div>

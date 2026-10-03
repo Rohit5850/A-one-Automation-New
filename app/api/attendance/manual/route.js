@@ -92,18 +92,22 @@ export async function POST(req) {
       update.reason = reason || "";
       if (status === "leave") {
         if (!LEAVE_OPTIONS.has(leaveType)) return NextResponse.json({ error: "Valid leave type select karein" }, { status: 400 });
-        const fraction = leaveType === "comp-off" ? Number(body.leaveFraction) : 1;
-        if (leaveType === "comp-off" && ![0.5,1].includes(fraction)) return NextResponse.json({ error: "C-Off Half-day ya Full-day select karein" }, { status: 400 });
+        const fraction = Number(body.leaveFraction || 1);
+        if (![0.5, 1].includes(fraction)) return NextResponse.json({ error: "Leave Half-day ya Full-day select karein" }, { status: 400 });
         update.leaveType = leaveType; update.leaveFraction = fraction;
         if (leaveType !== "unpaid") {
           const balance = await computeLeaveBalance(employeeId);
           const key = leaveType === "comp-off" ? "compOff" : "earned";
           let available = Number(balance?.[key]?.available || 0);
-          if (existing?.status === "leave" && existing?.leaveType === leaveType) available += Number(existing.leaveFraction || 1);
+          if (["leave", "half-day"].includes(existing?.status) && existing?.leaveType === leaveType) available += Number(existing.leaveFraction || 1);
           if (available < fraction) return NextResponse.json({ error: `${leaveType === "comp-off" ? "C-Off" : "Earned Leave"} balance available nahi hai` }, { status: 400 });
         }
+
+        const existingHasPunch = !!existing?.checkIn || (Array.isArray(existing?.sessions) && existing.sessions.some((s) => s?.checkIn));
+        if (fraction === 0.5 && existingHasPunch && !("sessions" in body)) update.status = "half-day";
       } else { update.leaveType = null; update.leaveFraction = 1; }
-      if (["leave","absent"].includes(status) && !("sessions" in body)) {
+      const effectiveLeaveFraction = status === "leave" ? Number(update.leaveFraction || 1) : 1;
+      if ((status === "absent" || (status === "leave" && effectiveLeaveFraction === 1)) && !("sessions" in body)) {
         update.sessions=[]; update.checkIn=null; update.checkOut=null; update.checkInLocation=null; update.checkOutLocation=null;
       }
     }

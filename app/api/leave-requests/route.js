@@ -34,7 +34,15 @@ export async function GET(req) {
         else
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         const requests = await LeaveRequest.find(filter).populate("employee", "fullName employeeId reportingHead").sort({ createdAt: -1 });
-        const payload = requests.map((r) => { const o = r.toObject(); o.canReview = r.status === "pending" && String(r.employee?.reportingHead || "") === String(session.user.id); o.isOwn = String(r.employee?._id || r.employee || "") === String(session.user.employeeId || ""); return o; });
+        const payload = await Promise.all(requests.map(async (r) => {
+            const o = r.toObject();
+            o.canReview = r.status === "pending" && String(r.employee?.reportingHead || "") === String(session.user.id);
+            o.isOwn = String(r.employee?._id || r.employee || "") === String(session.user.employeeId || "");
+            const targetEmployeeId = r.employee?._id || r.employee;
+            const workingDays = targetEmployeeId ? await countLeaveWorkingDays(targetEmployeeId, r.fromDate, r.toDate) : 0;
+            o.requestedDays = Number(r.leaveFraction || 1) === 0.5 ? 0.5 : workingDays;
+            return o;
+        }));
         return NextResponse.json({ requests: payload });
     }
     catch (err) {

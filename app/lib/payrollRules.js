@@ -82,8 +82,17 @@ export function summarizeAttendance(days = []) {
         const fraction = d.status === "leave" ? Math.min(1, Math.max(0, Number(d.leaveFraction || 1))) : 1;
         if (d.status === "present")
             summary.present += 1;
-        else if (d.status === "half-day")
+        else if (d.status === "half-day") {
             summary.halfDay += 1;
+            if (d.leaveType) {
+                const leaveFraction = Math.min(0.5, Math.max(0, Number(d.leaveFraction || 0.5)));
+                summary.leave += leaveFraction;
+                if (isPaidLeaveType(d.leaveType))
+                    summary.paidLeave += leaveFraction;
+                else
+                    summary.unpaidLeave += leaveFraction;
+            }
+        }
         else if (d.status === "leave") {
             summary.leave += fraction;
             if (isPaidLeaveType(d.leaveType))

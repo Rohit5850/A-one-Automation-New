@@ -20,6 +20,8 @@ function daysInclusive(from, to) {
 
 function requestDays(request) {
   if (Number(request?.leaveFraction || 1) === 0.5) return 0.5;
+  const backendDays = Number(request?.requestedDays);
+  if (Number.isFinite(backendDays) && backendDays >= 0) return backendDays;
   return daysInclusive(request?.fromDate, request?.toDate);
 }
 
@@ -76,6 +78,7 @@ function StatusBadge({ status }) {
 export default function EmployeeLeavePage() {
   const [balance, setBalance] = useState(null);
   const [requests, setRequests] = useState([]);
+  const [attendanceLeaveRows, setAttendanceLeaveRows] = useState([]);
   const [showPanel, setShowPanel] = useState(false);
   const [pageMessage, setPageMessage] = useState("");
   const [reviewingId, setReviewingId] = useState("");
@@ -84,13 +87,15 @@ export default function EmployeeLeavePage() {
   async function load() {
     setLoading(true);
     try {
-      const [balanceResponse, requestResponse] = await Promise.all([
+      const [balanceResponse, requestResponse, attendanceResponse] = await Promise.all([
         fetch("/api/leave-balance", { cache: "no-store" }),
         fetch("/api/leave-requests", { cache: "no-store" }),
+        fetch("/api/attendance", { cache: "no-store" }),
       ]);
 
       const balanceData = await balanceResponse.json().catch(() => ({}));
       const requestData = await requestResponse.json().catch(() => ({}));
+      const attendanceData = await attendanceResponse.json().catch(() => ({}));
 
       if (!balanceResponse.ok) {
         throw new Error(balanceData.error || "Leave balance load nahi ho paya.");
@@ -98,9 +103,15 @@ export default function EmployeeLeavePage() {
       if (!requestResponse.ok) {
         throw new Error(requestData.error || "Leave requests load nahi ho payi.");
       }
+      if (!attendanceResponse.ok) {
+        throw new Error(attendanceData.error || "Final leave usage load nahi ho paya.");
+      }
 
       setBalance(balanceData.balance || null);
       setRequests(requestData.requests || []);
+      setAttendanceLeaveRows((attendanceData.records || []).filter((record) =>
+        record?.leaveType && ["leave", "half-day"].includes(record.status)
+      ));
     } catch (error) {
       setPageMessage(error.message || "Leave data load nahi ho paya.");
     } finally {
@@ -121,6 +132,31 @@ export default function EmployeeLeavePage() {
     () => requests.filter((request) => request.canReview && !request.isOwn),
     [requests],
   );
+  const historyRequests = useMemo(() => {
+    const manualRows = attendanceLeaveRows
+      .filter((record) => !ownRequests.some((request) =>
+        request.status === "approved" &&
+        request.leaveType === record.leaveType &&
+        request.fromDate <= record.date &&
+        request.toDate >= record.date
+      ))
+      .map((record) => ({
+        _id: `attendance-${record._id || record.date}-${record.leaveType}`,
+        fromDate: record.date,
+        toDate: record.date,
+        leaveType: record.leaveType,
+        leaveFraction: Number(record.leaveFraction || 1),
+        halfDayPart: null,
+        note: record.reason || "Marked by HR in attendance",
+        status: "approved",
+        requestedDays: Number(record.leaveFraction || 1),
+        isAttendanceEntry: true,
+      }));
+
+    return [...ownRequests, ...manualRows].sort((a, b) =>
+      String(b.fromDate || "").localeCompare(String(a.fromDate || ""))
+    );
+  }, [attendanceLeaveRows, ownRequests]);
 
   async function review(id, status) {
     if (reviewingId) return;
@@ -226,7 +262,7 @@ export default function EmployeeLeavePage() {
           <BalanceCard title="Earned Leave">
             <Donut
               available={balance?.earned?.available ?? 0}
-              total={balance?.earned?.annualQuota ?? balance?.earned?.accruedSoFar ?? 0}
+              total={balance?.earned?.accruedSoFar ?? 0}
               color="#16a34a"
             />
             <BalanceStats
@@ -331,7 +367,7 @@ export default function EmployeeLeavePage() {
       <section className="leave-card leave-table-card">
         <div className="leave-table-card__header">
           <h2 className="leave-section-title">Leave History</h2>
-          <p className="leave-section-subtitle">Your past and current leave requests.</p>
+          <p className="leave-section-subtitle">Your leave requests and final HR-marked leave usage.</p>
         </div>
         <div className="leave-table-wrap">
           <table className="leave-table min-w-[850px]">
@@ -346,14 +382,14 @@ export default function EmployeeLeavePage() {
               </tr>
             </thead>
             <tbody>
-              {!loading && ownRequests.length === 0 && (
+              {!loading && historyRequests.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
                     No leave history to show.
                   </td>
                 </tr>
               )}
-              {ownRequests.map((request) => (
+              {historyRequests.map((request) => (
                 <tr key={request._id} className="leave-table__row">
                   <td className="leave-table__strong">
                     {LEAVE_TYPE_LABELS[request.leaveType] || request.leaveType}
