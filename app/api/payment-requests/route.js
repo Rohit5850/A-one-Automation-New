@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import PaymentRequest from "@/app/models/PaymentRequest";
+import Employee from "@/app/models/Employee";
 import { validateLoanTerms } from "@/app/lib/payrollRules";
+import { notifyActiveHr } from "@/app/lib/notificationService";
 
 // GET /api/payment-requests
 //   - employee: own requests only
@@ -66,6 +68,22 @@ export async function POST(req) {
     }
 
     await dbConnect();
+    const employee = await Employee.findById(session.user.employeeId).select("status");
+    if (!employee || employee.status !== "active") {
+      return NextResponse.json({ error: "Inactive employee payment request submit nahi kar sakta" }, { status: 400 });
+    }
+    const existingPending = await PaymentRequest.findOne({
+      employee: session.user.employeeId,
+      type,
+      status: "pending",
+    });
+    if (existingPending) {
+      return NextResponse.json(
+        { error: `Aapki ${type} ki ek request already pending hai` },
+        { status: 400 }
+      );
+    }
+
     const request = await PaymentRequest.create({
       employee: session.user.employeeId,
       type,
@@ -73,6 +91,15 @@ export async function POST(req) {
       monthlyDeduction: type === "loan" ? Number(monthlyDeduction) : undefined,
       totalMonths: type === "loan" ? Number(totalMonths) : undefined,
       note,
+    });
+
+    const typeLabel = type === "loan" ? "Loan" : "Advance";
+    await notifyActiveHr({
+      employeeId: session.user.employeeId,
+      eventKey: `payment-submitted:${request._id}`,
+      title: `New ${typeLabel} Request`,
+      message: `${typeLabel} request ₹${Number(amount).toLocaleString("en-IN")} approval ke liye submit hui hai.`,
+      href: "/hr/payment-requests",
     });
 
     return NextResponse.json({ request }, { status: 201 });

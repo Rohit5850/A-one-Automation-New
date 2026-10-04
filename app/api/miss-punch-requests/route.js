@@ -6,6 +6,7 @@ import MissPunchRequest from "@/app/models/MissPunchRequest";
 import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
 import { todayDateKey } from "@/app/lib/payrollRules";
+import { notifyAssignedReviewer } from "@/app/lib/notificationService";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 export async function GET(req) {
@@ -66,6 +67,15 @@ export async function POST(req) {
         if (!employee)
             return NextResponse.json({ error: "Employee not found" }, { status: 404 });
         const request = await MissPunchRequest.create({ employee: session.user.employeeId, date, punchType, checkInTime: punchType === "check-out" ? null : checkInTime, checkOutTime: punchType === "check-in" ? null : checkOutTime, note });
+        const punchLabel = punchType === "both" ? "Check-In + Check-Out" : punchType === "check-in" ? "Check-In" : "Check-Out";
+        await notifyAssignedReviewer({
+            employeeId: session.user.employeeId,
+            eventKey: `miss-punch-submitted:${request._id}`,
+            title: "New Miss Punch Request",
+            message: `${date} ke liye ${punchLabel} correction request approval ke liye submit hui hai.`,
+            hrHref: "/hr/miss-punch-requests",
+            managerHref: "/employee/miss-punch",
+        });
         return NextResponse.json({ request }, { status: 201 });
     }
     catch (err) {

@@ -54,7 +54,8 @@ export function inferRequiredRole(pathname, referer) {
   if (
     pathname.startsWith("/api/me") ||
     pathname.startsWith("/api/my-calendar") ||
-    pathname.startsWith("/api/leave-balance")
+    pathname.startsWith("/api/leave-balance") ||
+    pathname.startsWith("/api/notifications")
   ) {
     return "employee";
   }
@@ -63,6 +64,7 @@ export function inferRequiredRole(pathname, referer) {
     pathname.startsWith("/api/dashboard-summary") ||
     pathname.startsWith("/api/users") ||
     pathname.startsWith("/api/salaries") ||
+    pathname.startsWith("/api/overtime") ||
     pathname.startsWith("/api/employees")
   ) {
     return "hr";

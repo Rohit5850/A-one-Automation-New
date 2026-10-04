@@ -84,8 +84,8 @@ export default function EmployeeLeavePage() {
   const [reviewingId, setReviewingId] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const [balanceResponse, requestResponse, attendanceResponse] = await Promise.all([
         fetch("/api/leave-balance", { cache: "no-store" }),
@@ -115,12 +115,14 @@ export default function EmployeeLeavePage() {
     } catch (error) {
       setPageMessage(error.message || "Leave data load nahi ho paya.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
   useEffect(() => {
     load();
+    const timer = setInterval(() => load(true), 5000);
+    return () => clearInterval(timer);
   }, []);
 
   const ownRequests = useMemo(() => requests.filter((request) => request.isOwn !== false), [requests]);

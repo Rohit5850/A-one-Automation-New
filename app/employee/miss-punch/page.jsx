@@ -8,7 +8,7 @@ export default function Page() {
         return;
     } setMsg(`Request ${status}.`); load(); }
     const load = () => fetch("/api/miss-punch-requests", { cache: "no-store" }).then(r => r.json()).then(d => setRows(d.requests || []));
-    useEffect(() => { load(); }, []);
+    useEffect(() => { load(); const timer = setInterval(load, 5000); return () => clearInterval(timer); }, []);
     async function submit(e) { e.preventDefault(); setMsg(""); const r = await fetch("/api/miss-punch-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) }); const d = await r.json().catch(() => ({})); if (!r.ok) {
         setMsg(d.error || "Request failed");
         return;

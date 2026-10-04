@@ -7,6 +7,7 @@ import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
 import { computeLeaveBalance, countLeaveWorkingDays } from "@/app/lib/leaveBalance";
 import { todayDateKey } from "@/app/lib/payrollRules";
+import { notifyAssignedReviewer } from "@/app/lib/notificationService";
 export async function GET(req) {
     try {
         const session = await getServerSession(authOptions);
@@ -89,6 +90,15 @@ export async function POST(req) {
         if (overlapping)
             return NextResponse.json({ error: "Is date range me pehle se pending/approved leave request hai" }, { status: 400 });
         const request = await LeaveRequest.create({ employee: session.user.employeeId, fromDate, toDate, leaveType, leaveFraction, halfDayPart: leaveFraction === 0.5 ? halfDayPart : null, note });
+        const leaveLabel = leaveType === "comp-off" ? "C-Off" : leaveType === "unpaid" ? "Unpaid Leave" : "Earned Leave";
+        await notifyAssignedReviewer({
+            employeeId: session.user.employeeId,
+            eventKey: `leave-submitted:${request._id}`,
+            title: "New Leave Request",
+            message: `${leaveLabel} request ${fromDate}${toDate !== fromDate ? ` to ${toDate}` : ""} approval ke liye submit hui hai.`,
+            hrHref: "/hr/leave-requests",
+            managerHref: "/employee/leave",
+        });
         return NextResponse.json({ request }, { status: 201 });
     }
     catch (err) {

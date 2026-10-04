@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import EmployeeCard from "@/app/components/EmployeeCard";
+import EmployeeCard from "@/app/Components/EmployeeCard";
 import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
 function indiaDateKey(value = new Date()) {
     const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
@@ -29,6 +29,86 @@ function statusLabel(r) {
     return r?.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : "-";
 }
 function timeValue(v) { return v ? formatTime24(v) : ""; }
+
+function locationAddress(location) {
+    if (!location) return "";
+    const values = [
+        location.landmark,
+        location.placeName,
+        location.area,
+        location.city,
+        location.district,
+        location.state,
+        location.postcode ? `PIN ${location.postcode}` : "",
+        location.country,
+    ].filter((value) => typeof value === "string" && value.trim());
+
+    const unique = [];
+    const seen = new Set();
+    for (const value of values) {
+        const key = value.trim().toLowerCase();
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(value.trim());
+        }
+    }
+
+    if (unique.length) return unique.join(", ");
+    if (location.displayName) return location.displayName;
+    if (Number.isFinite(location.lat) && Number.isFinite(location.lng)) {
+        return `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`;
+    }
+    return "Location captured, address unavailable";
+}
+
+function mapsUrl(location) {
+    if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return "";
+    return `https://www.google.com/maps?q=${encodeURIComponent(`${location.lat},${location.lng}`)}`;
+}
+
+function LocationDetails({ location, label }) {
+    if (!location) return null;
+    const url = mapsUrl(location);
+    return <div className="rounded-lg border border-slate-100 bg-slate-50/70 p-2">
+        <div className="flex items-start justify-between gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{label}</span>
+            {url && <a href={url} target="_blank" rel="noreferrer" className="shrink-0 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800">Google Maps ↗</a>}
+        </div>
+        <p className="mt-1 text-xs leading-5 text-slate-700">{locationAddress(location)}</p>
+        {Number.isFinite(location.lat) && Number.isFinite(location.lng) && <p className="mt-1 text-[10px] text-slate-400">{location.lat.toFixed(6)}, {location.lng.toFixed(6)}{Number.isFinite(location.accuracy) ? ` · ±${Math.round(location.accuracy)}m` : ""}</p>}
+    </div>;
+}
+
+function AttendanceLocations({ record }) {
+    const punchLocations = [];
+    const sessionList = Array.isArray(record?.sessions) ? record.sessions : [];
+
+    sessionList.forEach((session, index) => {
+        if (session?.checkInLocation) {
+            punchLocations.push({
+                key: `in-${index}`,
+                label: `Check-In ${session.checkIn ? formatTime24(session.checkIn) : ""}`.trim(),
+                location: session.checkInLocation,
+            });
+        }
+        if (session?.checkOutLocation) {
+            punchLocations.push({
+                key: `out-${index}`,
+                label: `Check-Out ${session.checkOut ? formatTime24(session.checkOut) : ""}`.trim(),
+                location: session.checkOutLocation,
+            });
+        }
+    });
+
+    // Legacy attendance records may have day-level location without session-level location.
+    if (!punchLocations.length) {
+        if (record?.checkInLocation) punchLocations.push({ key: "day-in", label: `Check-In ${record.checkIn ? formatTime24(record.checkIn) : ""}`.trim(), location: record.checkInLocation });
+        if (record?.checkOutLocation) punchLocations.push({ key: "day-out", label: `Check-Out ${record.checkOut ? formatTime24(record.checkOut) : ""}`.trim(), location: record.checkOutLocation });
+    }
+
+    if (!punchLocations.length) return <span className="text-slate-400">Location not captured</span>;
+    return <div className="min-w-[290px] space-y-2">{punchLocations.map((item) => <LocationDetails key={item.key} label={item.label} location={item.location}/>)}</div>;
+}
 export default function HRAttendancePage() {
     const [employees, setEmployees] = useState([]), [query, setQuery] = useState(""), [employee, setEmployee] = useState(null), [records, setRecords] = useState([]);
     const [date, setDate] = useState(indiaDateKey()), [sessions, setSessions] = useState([{ checkIn: "", checkOut: "" }]), [timeMsg, setTimeMsg] = useState(""), [savingTime, setSavingTime] = useState(false);
@@ -36,8 +116,13 @@ export default function HRAttendancePage() {
     const today = indiaDateKey();
     useEffect(() => { fetch("/api/employees").then(r => r.json()).then(d => setEmployees((d.employees || []).filter(e => e.status === "active"))).catch(() => setEmployees([])); }, []);
     const filtered = useMemo(() => { const q = query.trim().toLowerCase(); return !q ? employees : employees.filter(e => (e.fullName || "").toLowerCase().includes(q) || (e.employeeId || "").toLowerCase().includes(q)); }, [employees, query]);
-    function load(id) { fetch(`/api/attendance?employeeId=${id}`).then(r => r.json()).then(d => setRecords(d.records || [])); }
+    function load(id) { fetch(`/api/attendance?employeeId=${id}`, { cache: "no-store" }).then(r => r.json()).then(d => setRecords(d.records || [])); }
     function choose(emp) { setEmployee(emp); setDate(today); setStatusDate(today); setTimeMsg(""); setStatusMsg(""); load(emp._id); }
+    useEffect(() => {
+        if (!employee?._id) return;
+        const timer = setInterval(() => load(employee._id), 5000);
+        return () => clearInterval(timer);
+    }, [employee?._id]);
     useEffect(() => { const r = records.find(x => x.date === date); const list = (r?.sessions || []).map(x => ({ checkIn: timeValue(x.checkIn), checkOut: timeValue(x.checkOut) })); setSessions(list.length ? list : [{ checkIn: "", checkOut: "" }]); }, [date, records]);
     async function saveTime() {
         if (!employee)
@@ -91,7 +176,7 @@ export default function HRAttendancePage() {
 
         <section className="bg-white/90 border border-white rounded-2xl shadow-sm p-5"><div className="mb-5"><p className="font-bold text-slate-900">Mark Attendance Status</p><p className="text-xs text-slate-500 mt-1">Only Present, Absent, Half-Day, Unpaid Leave and Paid Leave.</p></div><div className="grid sm:grid-cols-2 gap-3"><label className="text-xs font-medium text-slate-600">Date<input type="date" max={today} value={statusDate} onChange={e => setStatusDate(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label><label className="text-xs font-medium text-slate-600">Status<select value={status} onChange={e => setStatus(e.target.value)} className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"><option value="present">Present</option><option value="absent">Absent</option><option value="half-day">Half-Day</option><option value="unpaid-leave">Unpaid Leave</option><option value="paid-leave">Paid Leave</option></select></label></div>{status === "paid-leave" && <div className="mt-3 rounded-xl bg-indigo-50 border border-indigo-100 p-3"><label className="text-xs font-semibold text-indigo-800">Paid Leave Type<select value={paidType} onChange={e => setPaidType(e.target.value)} className="mt-1 w-full bg-white border border-indigo-200 rounded-xl px-3 py-2.5 text-sm text-slate-800"><option value="earned-full">Earned Leave (Full-Day)</option><option value="earned-half">Earned Leave (Half-Day)</option><option value="comp-off-half">C-OFF (Half-Day)</option><option value="comp-off-full">C-OFF (Full-Day)</option></select></label></div>}<label className="block mt-3 text-xs font-medium text-slate-600">Reason / Note<input value={reason} onChange={e => setReason(e.target.value)} placeholder="Optional note" className="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm"/></label>{statusMsg && <p className={`text-xs mt-3 ${statusMsg.includes("save ho gaya") ? "text-emerald-600" : "text-red-600"}`}>{statusMsg}</p>}<button onClick={saveStatus} disabled={savingStatus} className="mt-4 rounded-xl bg-indigo-600 text-white px-5 py-2.5 text-sm font-semibold disabled:opacity-50">{savingStatus ? "Saving..." : "Save Status"}</button></section>
       </div>
-      <section className="bg-white/90 border border-white rounded-2xl shadow-sm overflow-hidden"><div className="p-5 border-b border-slate-100"><p className="font-bold text-slate-900">Attendance History</p><p className="text-xs text-slate-500 mt-1">Saved daily time, worked hours, break and final status.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[780px] text-sm"><thead className="bg-slate-50 text-slate-500"><tr><th className="text-left px-4 py-3">Date</th><th className="text-left px-4 py-3">Sessions</th><th className="text-left px-4 py-3">Check-In</th><th className="text-left px-4 py-3">Check-Out</th><th className="text-left px-4 py-3">Worked</th><th className="text-left px-4 py-3">Break</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Reason</th></tr></thead><tbody>{records.map(r => <tr key={r._id} className="border-t border-slate-100"><td className="px-4 py-3">{formatDateDMY(r.date)}</td><td className="px-4 py-3 text-xs">{(r.sessions || []).length ? (r.sessions || []).map((x, i) => <div key={i}><b>Session {i + 1}:</b> {formatTime24(x.checkIn)}–{x.checkOut ? formatTime24(x.checkOut) : "Working"}</div>) : "-"}</td><td className="px-4 py-3 font-medium">{r.checkIn ? formatTime24(r.checkIn) : "-"}</td><td className="px-4 py-3 font-medium">{r.checkOut ? formatTime24(r.checkOut) : (r.checkIn ? "Working" : "-")}</td><td className="px-4 py-3">{fmtMs(r.workedMs)}</td><td className="px-4 py-3">{fmtMs(r.breakMs)}</td><td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{statusLabel(r)}</span></td><td className="px-4 py-3 text-slate-500">{r.reason || "-"}</td></tr>)}{!records.length && <tr><td colSpan="8" className="px-4 py-8 text-center text-slate-400">No attendance history.</td></tr>}</tbody></table></div></section>
+      <section className="bg-white/90 border border-white rounded-2xl shadow-sm overflow-hidden"><div className="p-5 border-b border-slate-100"><p className="font-bold text-slate-900">Attendance History</p><p className="text-xs text-slate-500 mt-1">Employee web punches automatically sync here. Check-In/Check-Out GPS is shown as resolved landmark/city/state/PIN with a direct Google Maps link. Normal office day is 09:00–18:00 (9h); work above 9h is shown as Extra Work only.</p></div><div className="overflow-x-auto"><table className="w-full min-w-[1420px] text-sm"><thead className="bg-slate-50 text-slate-500"><tr><th className="text-left px-4 py-3">Date</th><th className="text-left px-4 py-3">Sessions</th><th className="text-left px-4 py-3">Check-In</th><th className="text-left px-4 py-3">Check-Out</th><th className="text-left px-4 py-3">Location</th><th className="text-left px-4 py-3">Worked</th><th className="text-left px-4 py-3">Extra Work</th><th className="text-left px-4 py-3">Break</th><th className="text-left px-4 py-3">Late</th><th className="text-left px-4 py-3">Status</th><th className="text-left px-4 py-3">Reason</th></tr></thead><tbody>{records.map(r => <tr key={r._id} className="border-t border-slate-100 align-top"><td className="px-4 py-3">{formatDateDMY(r.date)}</td><td className="px-4 py-3 text-xs">{(r.sessions || []).length ? (r.sessions || []).map((x, i) => <div key={i}><b>Session {i + 1}:</b> {formatTime24(x.checkIn)}–{x.checkOut ? formatTime24(x.checkOut) : "Working"}</div>) : "-"}</td><td className="px-4 py-3 font-medium">{r.checkIn ? formatTime24(r.checkIn) : "-"}</td><td className="px-4 py-3 font-medium">{r.checkOut ? formatTime24(r.checkOut) : (r.checkIn ? "Working" : "-")}</td><td className="px-4 py-3"><AttendanceLocations record={r}/></td><td className="px-4 py-3">{fmtMs(r.workedMs)}</td><td className="px-4 py-3 font-semibold text-violet-700">{fmtMs(r.extraWorkMs)}</td><td className="px-4 py-3">{fmtMs(r.breakMs)}</td><td className="px-4 py-3">{r.lateArrival ? <span className={`rounded-full px-2 py-1 text-xs font-semibold ${r.latePenaltyHalfDay ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>Late #{r.lateArrivalNumber || "-"}{r.latePenaltyHalfDay ? " · Half-Day" : ""}</span> : "-"}</td><td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{statusLabel(r)}</span></td><td className="px-4 py-3 text-slate-500">{r.reason || "-"}</td></tr>)}{!records.length && <tr><td colSpan="11" className="px-4 py-8 text-center text-slate-400">No attendance history.</td></tr>}</tbody></table></div></section>
     </>}
   </div>;
 }

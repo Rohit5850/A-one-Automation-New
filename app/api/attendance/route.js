@@ -4,9 +4,11 @@ import { authOptions } from "@/app/lib/authOptions";
 import dbConnect from "@/app/lib/dbConnect";
 import Attendance from "@/app/models/Attendance";
 import Employee from "@/app/models/Employee";
+import Notification from "@/app/models/Notification";
+import Holiday from "@/app/models/Holiday";
 import { reverseGeocodeLocation } from "@/app/lib/reverseGeocode";
 import { todayDateKey } from "@/app/lib/payrollRules";
-import { automaticWorkStatus, sessionMetrics } from "@/app/lib/attendanceMetrics";
+import { automaticWorkStatus, isLateCheckIn, latePolicyMessage, LATE_WARNING_LIMIT, sessionMetrics } from "@/app/lib/attendanceMetrics";
 
 function todayStr() {
   return todayDateKey();
@@ -51,6 +53,33 @@ function ensureLegacySession(record) {
       },
     ];
   }
+}
+
+async function currentMonthLateCount(employeeId, month, excludeDate = null) {
+  const [rows, holidays] = await Promise.all([
+    Attendance.find({
+      employee: employeeId,
+      date: { $gte: `${month}-01`, $lte: `${month}-31` },
+      checkIn: { $ne: null },
+    }).select("date checkIn lateArrival"),
+    Holiday.find({ date: { $gte: `${month}-01`, $lte: `${month}-31` } }).select("date"),
+  ]);
+  const holidaySet = new Set(holidays.map((row) => row.date));
+
+  return rows.filter((row) => {
+    if (excludeDate && row.date === excludeDate) return false;
+    const sunday = new Date(`${row.date}T00:00:00+05:30`).getDay() === 0;
+    if (sunday || holidaySet.has(row.date)) return false;
+    // New rows persist lateArrival. Historical rows are evaluated from the real
+    // first Check-In so the current month count does not silently reset after deploy.
+    return row.lateArrival === true || isLateCheckIn(row.checkIn);
+  }).length;
+}
+
+async function isLatePolicyWorkingDay(date) {
+  const sunday = new Date(`${date}T00:00:00+05:30`).getDay() === 0;
+  if (sunday) return false;
+  return !(await Holiday.exists({ date }));
 }
 
 async function employeeLocationRule(targetEmployeeId) {
@@ -183,8 +212,12 @@ export async function POST(req) {
 
     const location = rawLocation ? await reverseGeocodeLocation(rawLocation) : undefined;
     const date = todayStr();
+    const month = date.slice(0, 7);
     const now = new Date();
     let record = await Attendance.findOne({ employee: targetEmployeeId, date });
+    const isFirstCheckInOfDay = !record?.checkIn;
+    let lateAlert = null;
+    let notificationPayload = null;
 
     if (record) {
       ensureLegacySession(record);
@@ -206,9 +239,8 @@ export async function POST(req) {
         record.reason = "";
         record.leaveType = null;
       }
-      await record.save();
     } else {
-      record = await Attendance.create({
+      record = new Attendance({
         employee: targetEmployeeId,
         date,
         checkIn: now,
@@ -220,8 +252,61 @@ export async function POST(req) {
       });
     }
 
+    // Late policy applies to the authenticated employee/manager's FIRST Check-In
+    // of the day only. A second session on the same date can never increment it.
+    if (session.user.role === "employee" && isFirstCheckInOfDay && isLateCheckIn(now) && await isLatePolicyWorkingDay(date)) {
+      const previousLateCount = await currentMonthLateCount(targetEmployeeId, month, date);
+      const lateCount = previousLateCount + 1;
+      const halfDayApplied = lateCount > LATE_WARNING_LIMIT;
+      const message = latePolicyMessage(lateCount);
+
+      record.lateArrival = true;
+      record.lateArrivalNumber = lateCount;
+      record.latePenaltyHalfDay = halfDayApplied;
+      record.lateMessage = message;
+      if (halfDayApplied && record.statusSource !== "manual") {
+        record.status = "half-day";
+        record.statusSource = "auto";
+        record.leaveType = null;
+        record.leaveFraction = 1;
+        record.reason = `Late policy: late arrival #${lateCount} this month`;
+      }
+
+      notificationPayload = {
+        employee: targetEmployeeId,
+        type: "late-arrival",
+        title: halfDayApplied ? "Late Coming - Half-Day Applied" : "Late Coming Warning",
+        message,
+        date,
+        month,
+        lateCount,
+        halfDayApplied,
+        isRead: false,
+      };
+
+      lateAlert = { lateCount, halfDayApplied, message };
+    }
+
+    // Attendance is the primary transaction. A notification failure must never
+    // make a successful punch look failed to the employee.
+    await record.save();
+    if (notificationPayload) {
+      try {
+        await Notification.findOneAndUpdate(
+          { employee: targetEmployeeId, type: "late-arrival", date },
+          { $set: notificationPayload },
+          { upsert: true, new: true, runValidators: true }
+        );
+      } catch (notificationError) {
+        console.error("Late notification save failed:", notificationError);
+      }
+    }
+
     return NextResponse.json(
-      { record: session.user.role === "employee" && !visibility ? hideLocation(record) : record },
+      {
+        record: session.user.role === "employee" && !visibility ? hideLocation(record) : record,
+        lateAlert,
+      },
       { status: 201 }
     );
   } catch (err) {
@@ -289,10 +374,15 @@ export async function PATCH(req) {
     if (location) record.checkOutLocation = location;
     if (record.statusSource !== "manual") {
       const metrics = sessionMetrics(record.toObject());
-      record.status = automaticWorkStatus(metrics.workedMs, false);
+      record.status = record.latePenaltyHalfDay
+        ? "half-day"
+        : automaticWorkStatus(metrics.workedMs, false);
       record.statusSource = "auto";
       record.leaveType = null;
-      record.reason = "";
+      record.leaveFraction = 1;
+      record.reason = record.latePenaltyHalfDay
+        ? `Late policy: late arrival #${record.lateArrivalNumber || 4} this month`
+        : "";
     }
     await record.save();
 

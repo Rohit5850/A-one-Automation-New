@@ -14,18 +14,20 @@ export default function PaymentRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
 
-  function load() {
-    setLoading(true);
+  function load(silent = false) {
+    if (!silent) setLoading(true);
     const q = filter === "all" ? "" : `?status=${filter}`;
     fetch(`/api/payment-requests${q}`)
       .then((res) => res.json())
       .then((data) => setRequests(data.requests || []))
       .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   }
 
   useEffect(() => {
     load();
+    const timer = setInterval(() => load(true), 5000);
+    return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 

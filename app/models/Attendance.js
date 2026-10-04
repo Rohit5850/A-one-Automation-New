@@ -63,6 +63,13 @@ const AttendanceSchema = new mongoose.Schema(
     },
     leaveFraction: { type: Number, enum: [0.5, 1], default: 1 },
     statusSource: { type: String, enum: ["auto", "manual"], default: "auto" },
+
+    // Late-arrival policy. Only the first check-in of a day can create one late event.
+    lateArrival: { type: Boolean, default: false, index: true },
+    lateArrivalNumber: { type: Number, min: 0, default: 0 },
+    latePenaltyHalfDay: { type: Boolean, default: false },
+    lateMessage: { type: String, trim: true },
+
     note: { type: String, trim: true },
   },
   { timestamps: true }

@@ -6,6 +6,7 @@ import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
 import { monthFromDate, todayDateKey } from "@/app/lib/payrollRules";
 import { isEmailSyntaxValid, isValidIndianMobile, normalizeEmail, normalizeIndianPhone } from "@/app/lib/identityValidation";
+import { notifyEmployee } from "@/app/lib/notificationService";
 async function requireHR() {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "hr")
@@ -199,6 +200,15 @@ export async function PUT(req, { params }) {
                 userUpdates.phone = updates.phone;
             if (Object.keys(userUpdates).length)
                 await User.updateOne({ _id: linkedUser._id }, { $set: userUpdates });
+        }
+        if (salaryChanged || wageChanged) {
+            await notifyEmployee({
+                employeeId: employee._id,
+                eventKey: `salary-revision:${todayDateKey().slice(0, 7)}`,
+                title: "Salary Structure Updated",
+                message: `HR ne salary structure update kiya hai. Current ${employee.wageType === "daily" ? "daily rate" : "monthly gross"}: ₹${Number(employee.salary || 0).toLocaleString("en-IN")}.`,
+                href: "/employee/salary",
+            });
         }
         return NextResponse.json({ employee });
     }

@@ -5,6 +5,7 @@ import dbConnect from "@/app/lib/dbConnect";
 import Loan from "@/app/models/Loan";
 import Employee from "@/app/models/Employee";
 import { monthFromDate, validateLoanTerms } from "@/app/lib/payrollRules";
+import { notifyEmployee } from "@/app/lib/notificationService";
 
 // GET /api/loans?employeeId=... -> HR only
 export async function GET(req) {
@@ -75,6 +76,14 @@ export async function POST(req) {
       totalMonths: Number(totalMonths),
       startMonth,
       remarks,
+    });
+
+    await notifyEmployee({
+      employeeId,
+      eventKey: `loan:${loan._id}:created`,
+      title: "Loan Added by HR",
+      message: `₹${Number(amount).toLocaleString("en-IN")} loan add hua hai. Monthly deduction ₹${Number(monthlyDeduction).toLocaleString("en-IN")} for ${Number(totalMonths)} month(s), start ${startMonth}.${remarks ? ` Note: ${remarks}` : ""}`,
+      href: "/employee/salary",
     });
 
     return NextResponse.json({ loan }, { status: 201 });

@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { formatDateDMY } from "@/app/lib/displayFormat";
 const NAV_ITEMS = [
     { href: "/hr/dashboard", label: "Home", icon: HomeIcon },
     { href: "/hr/employees/all", label: "Org", icon: OrgIcon },
@@ -22,7 +23,50 @@ export default function HRShell({ children }) {
     const { data: session } = useSession();
     const [search, setSearch] = useState("");
     const [showMenu, setShowMenu] = useState(false);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const initial = session?.user?.email?.[0]?.toUpperCase() || "H";
+
+    const loadNotifications = useCallback(async () => {
+        if (!session?.user?.id) return;
+        try {
+            const res = await fetch("/api/notifications", { cache: "no-store" });
+            if (!res.ok) return;
+            const data = await res.json();
+            setNotifications(data.notifications || []);
+            setUnreadCount(Number(data.unreadCount || 0));
+        } catch (error) {
+            console.error("HR notifications load failed:", error);
+        }
+    }, [session?.user?.id]);
+
+    useEffect(() => {
+        if (!session?.user?.id) return;
+        loadNotifications();
+        const interval = setInterval(loadNotifications, 5000);
+        return () => clearInterval(interval);
+    }, [session?.user?.id, loadNotifications]);
+
+    async function toggleNotifications() {
+        const opening = !showNotifications;
+        setShowNotifications(opening);
+        setShowMenu(false);
+        if (!opening || unreadCount <= 0) return;
+        try {
+            const res = await fetch("/api/notifications", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ all: true }),
+            });
+            if (res.ok) {
+                setUnreadCount(0);
+                setNotifications((rows) => rows.map((row) => ({ ...row, isRead: true })));
+            }
+        } catch (error) {
+            console.error("HR notification read update failed:", error);
+        }
+    }
     function handleSearch(e) {
         e.preventDefault();
         if (!search.trim())
@@ -64,12 +108,64 @@ export default function HRShell({ children }) {
         </form>
 
         <div className="flex items-center gap-4 shrink-0">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="opacity-90">
-            <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-            <path d="M13.7 21a2 2 0 01-3.4 0" stroke="currentColor" strokeWidth="2"/>
-          </svg>
           <div className="relative">
-            <button onClick={() => setShowMenu((v) => !v)} className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 shadow-lg flex items-center justify-center text-sm font-semibold hover:bg-white/20 transition" title="Account">
+            <button
+              type="button"
+              aria-label="Notifications"
+              onClick={toggleNotifications}
+              className="relative w-9 h-9 rounded-xl bg-white/10 border border-white/15 shadow-lg flex items-center justify-center hover:bg-white/20 transition"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="opacity-90">
+                <path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                <path d="M13.7 21a2 2 0 01-3.4 0" stroke="currentColor" strokeWidth="2"/>
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -right-1.5 -top-1.5 min-w-5 h-5 px-1 rounded-full bg-red-500 text-[10px] font-bold flex items-center justify-center ring-2 ring-slate-950">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+            {showNotifications && (
+              <div className="absolute right-0 top-12 w-[min(92vw,390px)] max-h-[70vh] overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-2xl z-50">
+                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-bold">Notifications</p>
+                    <p className="text-[11px] text-slate-400">Employee requests assigned to you</p>
+                  </div>
+                  <button type="button" onClick={() => setShowNotifications(false)} className="text-slate-400 hover:text-slate-700">✕</button>
+                </div>
+                <div className="max-h-[58vh] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-8 text-center text-sm text-slate-400">No notifications.</p>
+                  ) : (
+                    notifications.map((item) => {
+                      const content = (
+                        <div className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${item.isRead ? "bg-white" : "bg-red-50/60"}`}>
+                          <div className="flex gap-2">
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.isRead ? "bg-slate-300" : "bg-red-500"}`} />
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                              <p className="mt-1 text-xs leading-5 text-slate-600">{item.message}</p>
+                              <p className="mt-1 text-[10px] text-slate-400">{formatDateDMY(item.date)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                      return item.href ? (
+                        <Link key={item._id} href={item.href} onClick={() => setShowNotifications(false)} className="block hover:bg-slate-50">
+                          {content}
+                        </Link>
+                      ) : (
+                        <div key={item._id}>{content}</div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <button onClick={() => { setShowMenu((v) => !v); setShowNotifications(false); }} className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 shadow-lg flex items-center justify-center text-sm font-semibold hover:bg-white/20 transition" title="Account">
               {initial}
             </button>
             {showMenu && (<div className="absolute right-0 top-12 bg-white/95 backdrop-blur-2xl text-slate-800 border border-white rounded-2xl shadow-2xl text-sm z-40 w-52 overflow-hidden">

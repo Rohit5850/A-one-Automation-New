@@ -1,113 +1,304 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { formatDateDMY } from "@/app/lib/displayFormat";
 
 function todayKey() {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).formatToParts(new Date());
-  const get = (type) => parts.find((p) => p.type === type)?.value;
+  const get = (type) => parts.find((part) => part.type === type)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
+
 function currentMonth() {
   return todayKey().slice(0, 7);
 }
-function money(v) { return `₹${Number(v || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`; }
 
-export default function OvertimePage() {
+function money(value) {
+  return `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
+
+function OvertimePage() {
   const [employees, setEmployees] = useState([]);
   const [entries, setEntries] = useState([]);
   const [month, setMonth] = useState(currentMonth());
-  const [form, setForm] = useState({ employeeId: "", date: todayKey(), hours: "", settlement: "pay", ratePerHour: "", note: "" });
+  const [form, setForm] = useState({
+    employeeId: "",
+    date: todayKey(),
+    hours: "",
+    settlement: "pay",
+    ratePerHour: "",
+    note: "",
+  });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
+  const loadEntries = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/overtime?month=${month}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      setEntries(response.ok ? data.entries || [] : []);
+    } catch {
+      setEntries([]);
+    }
+  }, [month]);
 
-  function loadEntries() {
-    fetch(`/api/overtime?month=${month}`, { cache: "no-store" })
-      .then(r => r.json()).then(d => setEntries(d.entries || []));
-  }
   useEffect(() => {
-    fetch("/api/salaries", { cache: "no-store" }).then(r => r.json()).then(d => {
-      const list = d.employees || []; setEmployees(list);
-      if (list[0]) setForm(f => ({ ...f, employeeId: f.employeeId || list[0]._id }));
-    });
+    let active = true;
+
+    async function loadEmployees() {
+      try {
+        const response = await fetch("/api/salaries", { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!active) return;
+        const list = response.ok ? data.employees || [] : [];
+        setEmployees(list);
+        if (list[0]) {
+          setForm((current) => ({
+            ...current,
+            employeeId: current.employeeId || list[0]._id,
+          }));
+        }
+      } catch {
+        if (active) setEmployees([]);
+      }
+    }
+
+    loadEmployees();
+    return () => {
+      active = false;
+    };
   }, []);
-  useEffect(() => { loadEntries(); }, [month]);
+
+  useEffect(() => {
+    loadEntries();
+  }, [loadEntries]);
 
   async function save() {
-    setSaving(true); setMessage("");
-    const res = await fetch("/api/overtime", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    const data = await res.json().catch(() => ({})); setSaving(false);
-    if (!res.ok) { setMessage(data.error || "Save nahi ho paya"); return; }
-    setMessage(form.settlement === "pay" ? `Overtime pay ${money(data.entry.amount)} salary me add hoga.` : `${data.entry.compOffDays} C-Off day credit ho gaya.`);
-    setForm(f => ({ ...f, hours: "", ratePerHour: "", note: "" })); loadEntries();
-  }
-  async function remove(id) {
-    if (!confirm("Is overtime/C-Off entry ko delete karna hai?")) return;
-    const res = await fetch(`/api/overtime/${id}`, { method: "DELETE" });
-    if (res.ok) loadEntries();
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/overtime", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setMessage(data.error || "Save nahi ho paya");
+        return;
+      }
+
+      if (form.settlement === "pay") {
+        setMessage(`Overtime pay ${money(data.entry?.amount)} salary me add hoga.`);
+      } else {
+        setMessage(`${data.entry?.compOffDays || 0} C-Off day credit ho gaya.`);
+      }
+
+      setForm((current) => ({ ...current, hours: "", ratePerHour: "", note: "" }));
+      await loadEntries();
+    } catch {
+      setMessage("Save nahi ho paya");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  return <div className="p-4 sm:p-6 space-y-5 max-w-6xl mx-auto">
-    <div>
-      <h1 className="text-xl font-semibold text-slate-900">Overtime & C-Off</h1>
-      <p className="text-sm text-slate-500 mt-1">HR manually overtime enter kare. Pay select karne par salary me add hoga; Holiday/Week Off work par C-Off credit diya ja sakta hai.</p>
-    </div>
+  async function removeEntry(id) {
+    if (!window.confirm("Is overtime/C-Off entry ko delete karna hai?")) return;
 
-    <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-4">
-      <div className="grid sm:grid-cols-3 gap-4">
-        <label className="text-sm">Employee
-          <select value={form.employeeId} onChange={e=>setForm({...form,employeeId:e.target.value})} className="mt-1 w-full border rounded-md px-3 py-2">
-            {employees.map(e=><option key={e._id} value={e._id}>{e.fullName} ({e.employeeId})</option>)}
-          </select>
-        </label>
-        <label className="text-sm">Work Date
-          <input type="date" max={todayKey()} value={form.date} onChange={e=>setForm({...form,date:e.target.value})} className="mt-1 w-full border rounded-md px-3 py-2"/>
-          <span className="text-xs text-slate-400">Selected: {formatDateDMY(form.date)}</span>
-        </label>
-        {form.settlement === "pay" ? <label className="text-sm">Overtime Hours
-          <input type="number" min="0.01" max="24" step="0.25" value={form.hours} onChange={e=>setForm({...form,hours:e.target.value})} placeholder="e.g. 2.5" className="mt-1 w-full border rounded-md px-3 py-2"/>
-        </label> : <div className="text-sm"><span className="block">C-Off Worked Hours</span><div className="mt-1 border rounded-md px-3 py-2 bg-slate-50 text-slate-600">Attendance se automatic</div><span className="text-xs text-slate-400">4.5–&lt;9h = 0.5 day, ≥9h = 1 day</span></div>}
+    try {
+      const response = await fetch(`/api/overtime/${id}`, { method: "DELETE" });
+      if (response.ok) await loadEntries();
+    } catch {
+      // Keep the page usable if the request fails; the existing list remains visible.
+    }
+  }
+
+  return (
+    <div className="p-4 sm:p-6 space-y-5 max-w-6xl mx-auto">
+      <div>
+        <h1 className="text-xl font-semibold text-slate-900">Overtime & C-Off</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          HR manually overtime enter kare. Pay select karne par salary me add hoga; Holiday/Week Off work par C-Off credit diya ja sakta hai.
+        </p>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
-        <label className="text-sm">Settlement
-          <select value={form.settlement} onChange={e=>setForm({...form,settlement:e.target.value})} className="mt-1 w-full border rounded-md px-3 py-2">
-            <option value="pay">Pay in Salary</option>
-            <option value="comp-off">C-Off Credit</option>
-          </select>
-        </label>
-        {form.settlement === "pay" ? <label className="text-sm">OT Rate / Hour (optional)
-          <input type="number" min="0" step="0.01" value={form.ratePerHour} onChange={e=>setForm({...form,ratePerHour:e.target.value})} placeholder="Blank = auto salary rate ÷ 9" className="mt-1 w-full border rounded-md px-3 py-2"/>
-          <span className="text-xs text-slate-400">Employee-wise rate; blank par salary se auto rate.</span>
-        </label> : <div className="text-sm"><span className="block">C-Off Credit</span><div className="mt-1 border rounded-md px-3 py-2 bg-slate-50 text-slate-600">Attendance hours se automatic</div><span className="text-xs text-slate-400">Sirf Holiday / Sunday work ke liye.</span></div>}
-        <label className="text-sm">Note
-          <input value={form.note} onChange={e=>setForm({...form,note:e.target.value})} placeholder="Work details" className="mt-1 w-full border rounded-md px-3 py-2"/>
-        </label>
-      </div>
-      {message && <p className={`text-sm ${message.includes("nahi") || message.includes("sirf") ? "text-red-600":"text-emerald-700"}`}>{message}</p>}
-      <button disabled={saving || !form.employeeId || (form.settlement === "pay" && !form.hours)} onClick={save} className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 rounded-md px-4 py-2 text-sm disabled:opacity-50">{saving?"Saving...":"Add Overtime"}</button>
-    </div>
+      <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] p-5 space-y-4">
+        <div className="grid sm:grid-cols-3 gap-4">
+          <label className="text-sm">
+            Employee
+            <select
+              value={form.employeeId}
+              onChange={(event) => setForm({ ...form, employeeId: event.target.value })}
+              className="mt-1 w-full border rounded-md px-3 py-2"
+            >
+              {employees.map((employee) => (
+                <option key={employee._id} value={employee._id}>
+                  {employee.fullName} ({employee.employeeId})
+                </option>
+              ))}
+            </select>
+          </label>
 
-    <div className="flex justify-between items-center">
-      <h2 className="font-medium">Overtime History</h2>
-      <input type="month" value={month} onChange={e=>setMonth(e.target.value)} className="border rounded-md px-3 py-2 text-sm"/>
+          <label className="text-sm">
+            Work Date
+            <input
+              type="date"
+              max={todayKey()}
+              value={form.date}
+              onChange={(event) => setForm({ ...form, date: event.target.value })}
+              className="mt-1 w-full border rounded-md px-3 py-2"
+            />
+            <span className="text-xs text-slate-400">Selected: {formatDateDMY(form.date)}</span>
+          </label>
+
+          {form.settlement === "pay" ? (
+            <label className="text-sm">
+              Overtime Hours
+              <input
+                type="number"
+                min="0.01"
+                max="24"
+                step="0.25"
+                value={form.hours}
+                onChange={(event) => setForm({ ...form, hours: event.target.value })}
+                placeholder="e.g. 2.5"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              />
+            </label>
+          ) : (
+            <div className="text-sm">
+              <span className="block">C-Off Worked Hours</span>
+              <div className="mt-1 border rounded-md px-3 py-2 bg-slate-50 text-slate-600">Attendance se automatic</div>
+              <span className="text-xs text-slate-400">4.5–&lt;8h = 0.5 day, ≥8h = 1 day</span>
+            </div>
+          )}
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-4">
+          <label className="text-sm">
+            Settlement
+            <select
+              value={form.settlement}
+              onChange={(event) => setForm({ ...form, settlement: event.target.value })}
+              className="mt-1 w-full border rounded-md px-3 py-2"
+            >
+              <option value="pay">Pay in Salary</option>
+              <option value="comp-off">C-Off Credit</option>
+            </select>
+          </label>
+
+          {form.settlement === "pay" ? (
+            <label className="text-sm">
+              OT Rate / Hour (optional)
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.ratePerHour}
+                onChange={(event) => setForm({ ...form, ratePerHour: event.target.value })}
+                placeholder="Blank = auto salary rate ÷ 9"
+                className="mt-1 w-full border rounded-md px-3 py-2"
+              />
+              <span className="text-xs text-slate-400">Employee-wise rate; blank par salary se auto rate.</span>
+            </label>
+          ) : (
+            <div className="text-sm">
+              <span className="block">C-Off Credit</span>
+              <div className="mt-1 border rounded-md px-3 py-2 bg-slate-50 text-slate-600">Attendance hours se automatic</div>
+              <span className="text-xs text-slate-400">Sirf Holiday / Sunday work ke liye.</span>
+            </div>
+          )}
+
+          <label className="text-sm">
+            Note
+            <input
+              value={form.note}
+              onChange={(event) => setForm({ ...form, note: event.target.value })}
+              placeholder="Work details"
+              className="mt-1 w-full border rounded-md px-3 py-2"
+            />
+          </label>
+        </div>
+
+        {message && (
+          <p className={`text-sm ${message.includes("nahi") || message.includes("sirf") ? "text-red-600" : "text-emerald-700"}`}>
+            {message}
+          </p>
+        )}
+
+        <button
+          type="button"
+          disabled={saving || !form.employeeId || (form.settlement === "pay" && !form.hours)}
+          onClick={save}
+          className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/20 rounded-md px-4 py-2 text-sm disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Add Overtime"}
+        </button>
+      </div>
+
+      <div className="flex justify-between items-center">
+        <h2 className="font-medium">Overtime History</h2>
+        <input
+          type="month"
+          value={month}
+          onChange={(event) => setMonth(event.target.value)}
+          className="border rounded-md px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div className="bg-white border rounded-xl overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead className="bg-slate-100 text-left">
+            <tr>
+              <th className="p-3">Date</th>
+              <th className="p-3">Employee</th>
+              <th className="p-3">Hours</th>
+              <th className="p-3">Settlement</th>
+              <th className="p-3">Rate / Amount</th>
+              <th className="p-3">C-Off</th>
+              <th className="p-3">Note</th>
+              <th className="p-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="p-6 text-center text-slate-400">No overtime entries.</td>
+              </tr>
+            ) : (
+              entries.map((entry) => (
+                <tr key={entry._id} className="border-t">
+                  <td className="p-3">{formatDateDMY(entry.date)}</td>
+                  <td className="p-3">
+                    {entry.employee?.fullName}
+                    <div className="text-xs text-slate-400">{entry.employee?.employeeId}</div>
+                  </td>
+                  <td className="p-3">{entry.hours}</td>
+                  <td className="p-3">{entry.settlement === "pay" ? "Salary Pay" : "C-Off"}</td>
+                  <td className="p-3">
+                    {entry.settlement === "pay" ? `${money(entry.ratePerHour)}/hr · ${money(entry.amount)}` : "-"}
+                  </td>
+                  <td className="p-3">{entry.settlement === "comp-off" ? `${entry.compOffDays} day` : "-"}</td>
+                  <td className="p-3 text-slate-500">{entry.note || "-"}</td>
+                  <td className="p-3">
+                    <button type="button" onClick={() => removeEntry(entry._id)} className="text-red-600 text-xs">Delete</button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div className="bg-white border rounded-xl overflow-x-auto">
-      <table className="w-full min-w-[680px] text-sm">
-        <thead className="bg-slate-100 text-left"><tr><th className="p-3">Date</th><th className="p-3">Employee</th><th className="p-3">Hours</th><th className="p-3">Settlement</th><th className="p-3">Rate / Amount</th><th className="p-3">C-Off</th><th className="p-3">Note</th><th></th></tr></thead>
-        <tbody>{entries.length===0?<tr><td colSpan="8" className="p-6 text-center text-slate-400">No overtime entries.</td></tr>:entries.map(e=><tr key={e._id} className="border-t">
-          <td className="p-3">{formatDateDMY(e.date)}</td><td className="p-3">{e.employee?.fullName}<div className="text-xs text-slate-400">{e.employee?.employeeId}</div></td>
-          <td className="p-3">{e.hours}</td><td className="p-3">{e.settlement==="pay"?"Salary Pay":"C-Off"}</td>
-          <td className="p-3">{e.settlement==="pay"?`${money(e.ratePerHour)}/hr · ${money(e.amount)}`:"-"}</td><td className="p-3">{e.settlement==="comp-off"?`${e.compOffDays} day`:"-"}</td>
-          <td className="p-3 text-slate-500">{e.note||"-"}</td><td className="p-3"><button onClick={()=>remove(e._id)} className="text-red-600 text-xs">Delete</button></td>
-        </tr>)}</tbody>
-      </table>
-    </div>
-  </div>;
+  );
 }
+
+export default OvertimePage;

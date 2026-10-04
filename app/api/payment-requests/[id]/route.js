@@ -7,6 +7,7 @@ import Loan from "@/app/models/Loan";
 import Transaction from "@/app/models/Transaction";
 import Employee from "@/app/models/Employee";
 import { validateLoanTerms, todayDateKey } from "@/app/lib/payrollRules";
+import { notifyEmployee } from "@/app/lib/notificationService";
 
 function currentMonthStr() {
   return todayDateKey().slice(0, 7);
@@ -75,6 +76,16 @@ export async function PATCH(req, { params }) {
         });
       }
     }
+
+    const typeLabel = request.type === "loan" ? "Loan" : "Advance";
+    const statusLabel = status === "approved" ? "Approved" : "Rejected";
+    await notifyEmployee({
+      employeeId: request.employee,
+      eventKey: `payment:${request._id}:${status}`,
+      title: `${typeLabel} ${statusLabel}`,
+      message: `${typeLabel} request ₹${Number(request.amount || 0).toLocaleString("en-IN")} ${statusLabel.toLowerCase()} ho gayi hai.${request.reviewNote ? ` Note: ${request.reviewNote}` : ""}`,
+      href: "/employee/salary",
+    });
 
     return NextResponse.json({ request });
   } catch (err) {

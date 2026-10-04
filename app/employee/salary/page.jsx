@@ -33,13 +33,13 @@ export default function EmployeeSalaryPage() {
   const [sending, setSending] = useState(false);
   const [slipMessage, setSlipMessage] = useState("");
 
-  const loadPayroll = useCallback(() => {
-    setLoading(true);
+  const loadPayroll = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     fetch(`/api/payroll/me?month=${month}`)
       .then((res) => res.json())
       .then(setData)
       .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   }, [month]);
 
   function loadRequests() {
@@ -51,10 +51,14 @@ export default function EmployeeSalaryPage() {
 
   useEffect(() => {
     loadPayroll();
+    const timer = setInterval(() => loadPayroll(true), 5000);
+    return () => clearInterval(timer);
   }, [loadPayroll]);
 
   useEffect(() => {
     loadRequests();
+    const timer = setInterval(loadRequests, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   async function handleDownloadSlip() {

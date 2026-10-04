@@ -6,6 +6,7 @@ import Employee from "@/app/models/Employee";
 import Attendance from "@/app/models/Attendance";
 import Holiday from "@/app/models/Holiday";
 import { todayDateKey } from "@/app/lib/payrollRules";
+import { sessionMetrics } from "@/app/lib/attendanceMetrics";
 
 function todayStr() {
   return todayDateKey();
@@ -34,10 +35,32 @@ export async function GET() {
 
     const onLeaveToday = [];
     const notCheckedIn = [];
+    const lateToday = [];
+    const extraWorkToday = [];
     let presentCount = 0;
 
     for (const emp of employees) {
       const rec = recordByEmployee.get(emp._id.toString());
+      if (rec?.lateArrival) {
+        lateToday.push({
+          id: emp._id,
+          name: emp.fullName,
+          employeeId: emp.employeeId,
+          lateArrivalNumber: Number(rec.lateArrivalNumber || 0),
+          halfDayApplied: !!rec.latePenaltyHalfDay,
+        });
+      }
+      if (rec) {
+        const metrics = sessionMetrics(rec.toObject());
+        if (metrics.extraWorkMs > 0) {
+          extraWorkToday.push({
+            id: emp._id,
+            name: emp.fullName,
+            employeeId: emp.employeeId,
+            extraWorkMs: metrics.extraWorkMs,
+          });
+        }
+      }
 
       if (holiday || isSunday) {
         presentCount++; // paid day off, not "absent"
@@ -63,6 +86,8 @@ export async function GET() {
       presentCount,
       onLeaveToday,
       notCheckedIn,
+      lateToday,
+      extraWorkToday,
     });
   } catch (err) {
     console.error("GET /api/dashboard-summary error:", err);

@@ -91,6 +91,7 @@ export const config = {
     "/api/miss-punch-requests/:path*",
     "/api/leave-balance/:path*",
     "/api/my-calendar/:path*",
+    "/api/notifications/:path*",
     "/api/dashboard-summary/:path*",
     "/api/payment-requests/:path*",
     "/api/holidays/:path*",

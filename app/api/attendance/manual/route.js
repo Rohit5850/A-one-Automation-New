@@ -7,7 +7,8 @@ import Employee from "@/app/models/Employee";
 import Holiday from "@/app/models/Holiday";
 import { dateKeyFromDate, todayDateKey } from "@/app/lib/payrollRules";
 import { computeLeaveBalance } from "@/app/lib/leaveBalance";
-import { sessionMetrics } from "@/app/lib/attendanceMetrics";
+import { automaticWorkStatus, sessionMetrics } from "@/app/lib/attendanceMetrics";
+import { notifyEmployee } from "@/app/lib/notificationService";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const STATUS_OPTIONS = new Set(["present", "half-day", "leave", "absent"]);
@@ -59,7 +60,7 @@ export async function POST(req) {
       update.checkOutLocation = null;
       if (!status) {
         const metrics = sessionMetrics({ sessions: single });
-        update.status = metrics.workedMs < 4.5*3600000 ? "absent" : metrics.workedMs === 4.5*3600000 ? "half-day" : "present";
+        update.status = automaticWorkStatus(metrics.workedMs, false);
         update.statusSource = "auto";
         update.leaveType = null;
         update.leaveFraction = 1;
@@ -77,7 +78,7 @@ export async function POST(req) {
       update.checkOutLocation = null;
       if (!status) {
         const metrics = sessionMetrics({ sessions });
-        update.status = metrics.workedMs < 4.5*3600000 ? "absent" : metrics.workedMs === 4.5*3600000 ? "half-day" : "present";
+        update.status = automaticWorkStatus(metrics.workedMs, false);
         update.statusSource = "auto";
         update.leaveType = null;
         update.leaveFraction = 1;
@@ -114,7 +115,16 @@ export async function POST(req) {
 
     if (!status && !("sessions" in body) && !("checkIn" in body) && !("checkOut" in body)) return NextResponse.json({ error: "Status ya attendance time required hai" }, { status: 400 });
     const record = await Attendance.findOneAndUpdate({ employee: employeeId, date }, { $set: update }, { upsert:true,new:true,runValidators:true });
-    return NextResponse.json({ record, metrics: sessionMetrics(record.toObject()) }, { status: 201 });
+    const metrics = sessionMetrics(record.toObject());
+    const workedHours = Math.round((Number(metrics.workedMs || 0) / 3600000) * 100) / 100;
+    await notifyEmployee({
+      employeeId,
+      eventKey: `manual-attendance:${date}`,
+      title: "Attendance Updated by HR",
+      message: `${date} ki attendance HR ne update ki hai. Status: ${String(record.status || "pending").replace("half-day", "Half-Day")}${workedHours > 0 ? `, Worked: ${workedHours} hrs` : ""}.${record.reason ? ` Reason: ${record.reason}` : ""}`,
+      href: "/employee/attendance",
+    });
+    return NextResponse.json({ record, metrics }, { status: 201 });
   } catch (err) {
     console.error("POST /api/attendance/manual error:", err);
     return NextResponse.json({ error: "Could not save manual attendance" }, { status: 500 });

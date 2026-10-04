@@ -39,7 +39,20 @@ function fmtHMS(ms) {
     const s = String(totalSeconds % 60).padStart(2, "0");
     return `${h}:${m}:${s}`;
 }
-const ON_TIME_CUTOFF_HOUR = 10; // arrival before 10:00 AM counts as "On Time"
+function isLateArrival(value) {
+    if (!value) return false;
+    const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+    }).formatToParts(new Date(value));
+    const hour = Number(parts.find((part) => part.type === "hour")?.value || 0);
+    const minute = Number(parts.find((part) => part.type === "minute")?.value || 0);
+    const second = Number(parts.find((part) => part.type === "second")?.value || 0);
+    return hour * 3600 + minute * 60 + second > 9 * 3600 + 15 * 60;
+}
 function attendanceStatusLabel(day) {
     if (!day?.status) return "-";
     const fraction = Number(day.leaveFraction || 1);
@@ -71,6 +84,7 @@ export default function EmployeeAttendancePage() {
     const [todayAttendance, setTodayAttendance] = useState(null);
     const [showLocationToEmployee, setShowLocationToEmployee] = useState(false);
     const [locationRequired, setLocationRequired] = useState(false);
+    const [lateAlert, setLateAlert] = useState(null);
     useEffect(() => {
         fetch("/api/me")
             .then((res) => res.json())
@@ -82,8 +96,8 @@ export default function EmployeeAttendancePage() {
         const t = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(t);
     }, []);
-    const loadCalendar = useCallback(() => {
-        setLoading(true);
+    const loadCalendar = useCallback((silent = false) => {
+        if (!silent) setLoading(true);
         fetch(`/api/my-calendar?month=${month}`, { cache: "no-store" })
             .then((res) => res.json())
             .then((data) => {
@@ -91,7 +105,7 @@ export default function EmployeeAttendancePage() {
             setShowLocationToEmployee(!!data.showLocationToEmployee);
         })
             .catch((err) => console.error(err))
-            .finally(() => setLoading(false));
+            .finally(() => { if (!silent) setLoading(false); });
     }, [month]);
     const loadTodayAttendance = useCallback(async () => {
         try {
@@ -110,6 +124,11 @@ export default function EmployeeAttendancePage() {
     useEffect(() => {
         loadCalendar();
         loadTodayAttendance();
+        const timer = setInterval(() => {
+            loadCalendar(true);
+            loadTodayAttendance();
+        }, 5000);
+        return () => clearInterval(timer);
     }, [loadCalendar, loadTodayAttendance]);
     const today = todayStr();
     const calendarTodayRecord = days.find((d) => d.date === today);
@@ -244,7 +263,11 @@ export default function EmployeeAttendancePage() {
             const data = await res.json().catch(() => ({}));
             if (data.record)
                 setTodayAttendance(data.record);
-            setMessage("Checked in!");
+            if (data.lateAlert) {
+                setLateAlert(data.lateAlert);
+                window.dispatchEvent(new CustomEvent("employee-notifications-refresh"));
+            }
+            setMessage(data.lateAlert ? "Checked in - Late Coming recorded." : "Checked in!");
             await Promise.all([loadTodayAttendance(), Promise.resolve(loadCalendar())]);
         }
         else {
@@ -312,11 +335,25 @@ export default function EmployeeAttendancePage() {
     const avgMs = last7.length > 0
         ? last7.reduce((sum, d) => sum + (d.workedMs || 0), 0) / last7.length
         : 0;
-    const onTimeCount = last7.filter((d) => new Date(d.checkIn).getHours() < ON_TIME_CUTOFF_HOUR).length;
+    const onTimeCount = last7.filter((d) => !(d.lateArrival === true || isLateArrival(d.checkIn))).length;
     const onTimePct = last7.length > 0 ? Math.round((onTimeCount / last7.length) * 100) : 0;
     const weekdays = ["M", "T", "W", "T", "F", "S", "S"];
     const todayDow = (now.getDay() + 6) % 7; // Mon=0...Sun=6
     return (<div className="p-3 sm:p-6 lg:p-8 space-y-6">
+      {lateAlert && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4">
+        <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-5 shadow-2xl">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-xl">⚠</div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-bold text-red-700">Late Coming Warning</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-700">{lateAlert.message}</p>
+              <p className="mt-2 text-xs font-semibold text-slate-500">Late count this month: {lateAlert.lateCount}</p>
+              {lateAlert.halfDayApplied && <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Half-Day will be applied to today&apos;s attendance after checkout.</p>}
+            </div>
+          </div>
+          <button type="button" onClick={() => setLateAlert(null)} className="mt-5 w-full rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700">I Understand</button>
+        </div>
+      </div>}
       <p className="text-xs font-medium text-slate-400 tracking-wide uppercase">Attendance</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -374,6 +411,7 @@ export default function EmployeeAttendancePage() {
             </>) : (<>
               {todayRecord?.checkIn && (<p className="text-xs text-slate-500 mb-2">
                   Worked: {fmtHM(todayRecord.workedMs || 0)} · Break: {fmtHM(todayRecord.breakMs || 0)}
+                  {(todayRecord.extraWorkMs || 0) > 0 ? ` · Extra Work: ${fmtHM(todayRecord.extraWorkMs)}` : ""}
                 </p>)}
               <button onClick={handleClockIn} disabled={marking} className="w-full bg-emerald-600 text-white text-sm font-medium py-2 rounded-md hover:bg-emerald-700 disabled:opacity-60">
                 Web Clock-in
@@ -400,11 +438,12 @@ export default function EmployeeAttendancePage() {
         </div>
 
         <div className="bg-white/80 backdrop-blur-xl border border-white/70 rounded-2xl shadow-[0_18px_50px_-28px_rgba(15,23,42,0.35)] overflow-x-auto">
-          <div className="min-w-[1120px]">
-          <div className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_90px_90px_90px]"} px-4 py-2 bg-slate-100 text-slate-500 text-xs font-medium uppercase tracking-wide`}>
+          <div className="min-w-[1240px]">
+          <div className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_100px_90px_90px_90px]"} px-4 py-2 bg-slate-100 text-slate-500 text-xs font-medium uppercase tracking-wide`}>
             <span>Date</span>
             <span>Attendance</span>
             <span>Worked Hrs</span>
+            <span>Extra Work</span>
             <span>Break</span>
             <span>Check In</span>
             <span>Check Out</span>
@@ -429,7 +468,7 @@ export default function EmployeeAttendancePage() {
                   </span>
                 </div>);
             }
-            return (<div key={d.date} className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_90px_90px_90px]"} px-4 py-3 border-t border-slate-100/80 items-start`}>
+            return (<div key={d.date} className={`grid ${showLocationToEmployee ? "grid-cols-[110px_1fr_100px_100px_90px_90px_90px_300px]" : "grid-cols-[110px_1fr_100px_100px_90px_90px_90px]"} px-4 py-3 border-t border-slate-100/80 items-start`}>
                 <span className="text-sm text-slate-700">
                   {formatDateDMY(d.date)}
                 </span>
@@ -441,10 +480,12 @@ export default function EmployeeAttendancePage() {
                     {d.checkIn && (<div className={`h-full rounded-full ${d.status === "leave" ? "bg-blue-400" : "bg-teal-400"}`} style={{ width: eff ? "70%" : "25%" }}/>)}
                   </div>
                   {(d.sessions || []).length > 0 && <div className="mt-1 space-y-0.5">{d.sessions.map((x, i) => <p key={i} className="text-[11px] text-slate-500"><b>Session {i + 1}:</b> {formatTime24(x.checkIn)} – {x.checkOut ? formatTime24(x.checkOut) : "Working"}</p>)}</div>}
+                  {d.lateArrival && <p className="text-xs font-semibold text-red-600 mt-1">Late Coming #{d.lateArrivalNumber || "-"}{d.latePenaltyHalfDay ? " · Half-Day penalty" : ""}</p>}
                   {d.reason && <p className="text-xs text-slate-400 mt-1">{d.reason}</p>}
                   {d.status === "absent" && (<p className="text-xs text-red-500 mt-1">Absent</p>)}
                 </div>
                 <span className="text-sm text-slate-700">{eff || "-"}</span>
+                <span className="text-sm font-semibold text-violet-700">{(d.extraWorkMs || 0) > 0 ? fmtHM(d.extraWorkMs) : "-"}</span>
                 <span className="text-sm text-amber-700">{(d.breakMs || 0) > 0 ? fmtHM(d.breakMs) : "-"}</span>
                 <span className="text-sm font-medium text-slate-700">{d.checkIn ? formatTime24(d.checkIn) : "-"}</span>
                 <span className="text-sm font-medium text-slate-700">{d.checkOut ? formatTime24(d.checkOut) : (d.checkIn ? "Working" : "-")}</span>

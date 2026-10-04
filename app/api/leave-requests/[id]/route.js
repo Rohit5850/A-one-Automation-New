@@ -9,6 +9,7 @@ import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
 import { dateKeyFromDate } from "@/app/lib/payrollRules";
 import { computeLeaveBalance, countLeaveWorkingDays } from "@/app/lib/leaveBalance";
+import { notifyEmployee } from "@/app/lib/notificationService";
 function* dateRange(fromDate, toDate) { let d = new Date(`${fromDate}T00:00:00Z`), e = new Date(`${toDate}T00:00:00Z`); while (d <= e) {
     yield d.toISOString().slice(0, 10);
     d = new Date(d.getTime() + 86400000);
@@ -77,6 +78,15 @@ export async function PATCH(req, { params }) {
                 await Attendance.findOneAndUpdate({ employee: request.employee._id, date }, { $set: set }, { upsert: true, new: true, runValidators: true });
             }
         }
+        const leaveLabel = request.leaveType === "comp-off" ? "C-Off" : request.leaveType === "unpaid" ? "Unpaid Leave" : "Earned Leave";
+        const statusLabel = status === "approved" ? "Approved" : "Rejected";
+        await notifyEmployee({
+            employeeId: request.employee._id,
+            eventKey: `leave:${request._id}:${status}`,
+            title: `Leave ${statusLabel}`,
+            message: `${leaveLabel} request ${request.fromDate}${request.toDate !== request.fromDate ? ` to ${request.toDate}` : ""} ${statusLabel.toLowerCase()} ho gayi hai.${request.reviewNote ? ` Note: ${request.reviewNote}` : ""}`,
+            href: "/employee/leave",
+        });
         return NextResponse.json({ request });
     }
     catch (err) {

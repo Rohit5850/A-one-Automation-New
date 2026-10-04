@@ -6,11 +6,12 @@ import MissPunchRequest from "@/app/models/MissPunchRequest";
 import Attendance from "@/app/models/Attendance";
 import Employee from "@/app/models/Employee";
 import User from "@/app/models/User";
-import { sessionMetrics } from "@/app/lib/attendanceMetrics";
+import { automaticWorkStatus, sessionMetrics } from "@/app/lib/attendanceMetrics";
+import { notifyEmployee } from "@/app/lib/notificationService";
 function toIndiaDate(date, hhmm) { return new Date(`${date}T${hhmm}:00+05:30`); }
 function autoStatus(sessions) {
     const ms = sessionMetrics({ sessions }).workedMs;
-    return ms < 4.5 * 3600000 ? "absent" : ms === 4.5 * 3600000 ? "half-day" : "present";
+    return automaticWorkStatus(ms, false);
 }
 function validateSessions(sessions) {
     const sorted = [...sessions].sort((a, b) => new Date(a.checkIn) - new Date(b.checkIn));
@@ -38,14 +39,36 @@ export async function PATCH(req, { params }) {
             return NextResponse.json({ error: "Not found" }, { status: 404 });
         if (request.status !== "pending")
             return NextResponse.json({ error: "Request already reviewed hai" }, { status: 400 });
-        // The assigned Reporting Head is the normal approver. If that HR account is
-        // missing/inactive, any active HR can perform the fallback approval.
+        // The assigned Reporting Head (Manager or HR) is the normal approver.
+        // HR may act only as a fallback when that assigned head is unavailable.
         if (request.employee?.reportingHead) {
-            const head = await User.findById(request.employee.reportingHead).select("isActive role");
-            const isAssignedHead = String(request.employee.reportingHead) === String(session.user.id);
-            const fallbackAllowed = !head || !head.isActive || head.role !== "hr";
-            if (!isAssignedHead && !fallbackAllowed)
-                return NextResponse.json({ error: "Ye request assigned Reporting Head ko approve/reject karni hai" }, { status: 403 });
+            const head = await User.findById(request.employee.reportingHead)
+                .select("isActive role employee")
+                .populate("employee", "employeeType status");
+
+            const isAssignedHead =
+                String(request.employee.reportingHead) === String(session.user.id);
+
+            const headAvailable =
+                !!head?.isActive &&
+                (head.role === "hr" ||
+                    (head.role === "employee" &&
+                        head.employee?.employeeType === "manager" &&
+                        head.employee?.status !== "inactive"));
+
+            const hrFallbackAllowed = session.user.role === "hr" && !headAvailable;
+
+            if (!isAssignedHead && !hrFallbackAllowed) {
+                return NextResponse.json(
+                    { error: "Ye request assigned Reporting Head ko approve/reject karni hai" },
+                    { status: 403 }
+                );
+            }
+        } else if (session.user.role !== "hr") {
+            return NextResponse.json(
+                { error: "Reporting Head assigned nahi hai; HR review karega" },
+                { status: 403 }
+            );
         }
         if (body.status === "approved") {
             const attendance = await Attendance.findOne({ employee: request.employee._id, date: request.date });
@@ -89,6 +112,14 @@ export async function PATCH(req, { params }) {
         request.reviewNote = body.reviewNote || "";
         request.reviewedBy = session.user.id;
         await request.save();
+        const statusLabel = body.status === "approved" ? "Approved" : "Rejected";
+        await notifyEmployee({
+            employeeId: request.employee._id,
+            eventKey: `miss-punch:${request._id}:${body.status}`,
+            title: `Miss Punch ${statusLabel}`,
+            message: `${request.date} ki Miss Punch request ${statusLabel.toLowerCase()} ho gayi hai.${request.reviewNote ? ` Note: ${request.reviewNote}` : ""}`,
+            href: "/employee/miss-punch",
+        });
         return NextResponse.json({ request });
     }
     catch (err) {

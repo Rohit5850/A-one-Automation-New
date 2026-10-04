@@ -423,7 +423,7 @@ function DetailsTab({ employee, payroll, month }) {
         setSending(true);
         setMessage("");
         try {
-            const { generateSalarySlipPdf } = await import("@/lib/salarySlip");
+            const { generateSalarySlipPdf } = await import("@/app/lib/salarySlip");
             await generateSalarySlipPdf(employee, payroll, month);
         }
         catch (err) {

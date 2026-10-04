@@ -6,6 +6,7 @@ import Transaction from "@/app/models/Transaction";
 import Employee from "@/app/models/Employee";
 import Loan from "@/app/models/Loan";
 import { applyLoanMonth, compareMonths, createLoanStates, monthFromDate, shiftMonth, todayDateKey, } from "@/app/lib/payrollRules";
+import { notifyEmployee } from "@/app/lib/notificationService";
 const ALLOWED_TYPES = new Set(["salary", "bonus", "advance", "expense", "reimbursement", "loan-collect"]);
 const ALLOWED_MODES = new Set(["cash", "online"]);
 async function outstandingBeforeManualCollection(employee, targetDate) {
@@ -143,6 +144,15 @@ export async function POST(req) {
             remarks: String(remarks).trim(),
             createdBy: session.user.id,
         });
+        const typeLabels = { salary: "Salary Payment", bonus: "Bonus", advance: "Advance", expense: "Expense", reimbursement: "Reimbursement", "loan-collect": "Loan Collection" };
+        await notifyEmployee({
+            employeeId,
+            eventKey: `transaction:${transaction._id}:created`,
+            title: `${typeLabels[type] || "Payroll Transaction"} Added`,
+            message: `${typeLabels[type] || type} ₹${numericAmount.toLocaleString("en-IN")} HR ne add kiya hai. Remarks: ${String(remarks).trim()}`,
+            date: txnDateKey,
+            href: "/employee/salary",
+        });
         return NextResponse.json({ transaction }, { status: 201 });
     }
     catch (err) {
@@ -177,6 +187,15 @@ export async function PUT(req) {
         txn.editedBy = session.user.id;
         txn.editedAt = new Date();
         await txn.save();
+        const typeLabels = { salary: "Salary Payment", bonus: "Bonus", advance: "Advance", expense: "Expense", reimbursement: "Reimbursement", "loan-collect": "Loan Collection" };
+        await notifyEmployee({
+            employeeId: txn.employee,
+            eventKey: `transaction:${txn._id}:updated`,
+            title: `${typeLabels[txn.type] || "Payroll Transaction"} Updated`,
+            message: `${typeLabels[txn.type] || txn.type} transaction HR ne update kiya hai. Amount: ₹${Number(txn.amount || 0).toLocaleString("en-IN")}. Remarks: ${txn.remarks}`,
+            date: txn.date.toISOString().slice(0, 10),
+            href: "/employee/salary",
+        });
         return NextResponse.json({ transaction: txn });
     }
     catch (err) {

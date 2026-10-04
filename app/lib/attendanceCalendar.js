@@ -73,7 +73,7 @@ export async function buildMonthCalendar(employeeId, month) {
     // manual Leave/Absent/Half-Day accidentally reduce base salary.
     if (holidayName || dayOfWeek === 0) {
       if (existing) {
-        const { sessions, workedMs, breakMs } = sessionMetrics(existing);
+        const { sessions, workedMs, breakMs, extraWorkMs } = sessionMetrics(existing);
         days.push({
           date: dateStr,
           status: holidayName ? "holiday" : "week-off",
@@ -86,6 +86,10 @@ export async function buildMonthCalendar(employeeId, month) {
           sessions,
           workedMs,
           breakMs,
+          extraWorkMs,
+          lateArrival: !!existing.lateArrival,
+          lateArrivalNumber: Number(existing.lateArrivalNumber || 0),
+          latePenaltyHalfDay: !!existing.latePenaltyHalfDay,
           _id: existing._id,
         });
       } else {
@@ -99,7 +103,7 @@ export async function buildMonthCalendar(employeeId, month) {
     }
 
     if (existing) {
-      const { sessions, workedMs, breakMs } = sessionMetrics(existing);
+      const { sessions, workedMs, breakMs, extraWorkMs } = sessionMetrics(existing);
       days.push({
         date: dateStr,
         status: existing.status,
@@ -113,6 +117,10 @@ export async function buildMonthCalendar(employeeId, month) {
         sessions,
         workedMs,
         breakMs,
+        extraWorkMs,
+        lateArrival: !!existing.lateArrival,
+        lateArrivalNumber: Number(existing.lateArrivalNumber || 0),
+        latePenaltyHalfDay: !!existing.latePenaltyHalfDay,
         _id: existing._id,
       });
       continue;

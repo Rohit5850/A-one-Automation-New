@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import EmployeeCard from "@/app/components/EmployeeCard";
+import EmployeeCard from "@/app/Components/EmployeeCard";
 import { formatDateDMY, formatTime24 } from "@/app/lib/displayFormat";
 
 function todayKey() {
@@ -217,10 +217,12 @@ export default function EmployeeDashboard() {
           </span>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Info label="Check-In" value={todayRecord?.checkIn ? formatTime24(todayRecord.checkIn) : "-"} />
           <Info label="Check-Out" value={todayRecord?.checkOut ? formatTime24(todayRecord.checkOut) : "-"} />
           <Info label="Worked" value={formatHours(todayRecord?.workedMs)} />
+          <Info label="Extra Work" value={(todayRecord?.extraWorkMs || 0) > 0 ? formatHours(todayRecord.extraWorkMs) : "-"} />
+          <Info label="Late" value={todayRecord?.lateArrival ? `Late #${todayRecord.lateArrivalNumber || "-"}${todayRecord.latePenaltyHalfDay ? " · Half-Day" : ""}` : "No"} />
         </div>
 
         {Array.isArray(todayRecord?.sessions) && todayRecord.sessions.length > 0 && (

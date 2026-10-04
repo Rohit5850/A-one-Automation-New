@@ -8,6 +8,7 @@ import Holiday from "@/app/models/Holiday";
 import Attendance from "@/app/models/Attendance";
 import { salaryRateForMonth, todayDateKey, roundMoney } from "@/app/lib/payrollRules";
 import { compOffCreditForWorkedMs, sessionMetrics } from "@/app/lib/attendanceMetrics";
+import { notifyEmployee } from "@/app/lib/notificationService";
 
 function daysInMonth(month) {
   const [y, m] = month.split("-").map(Number);
@@ -17,7 +18,7 @@ function autoHourlyRate(employee, date) {
   const month = date.slice(0, 7);
   const rate = salaryRateForMonth(employee, month);
   const daily = rate.wageType === "monthly" ? Number(rate.amount || 0) / daysInMonth(month) : Number(rate.amount || 0);
-  return roundMoney(daily / 9); // normal 09:00-18:00 = 9 hours
+  return roundMoney(daily / 9); // normal office working day 09:00-18:00 = 9 hours
 }
 async function isOffDay(date) {
   const sunday = new Date(`${date}T00:00:00Z`).getUTCDay() === 0;
@@ -100,7 +101,7 @@ export async function POST(req) {
       settledHours = Math.round((metrics.workedMs / 3600000) * 100) / 100;
       creditedDays = compOffCreditForWorkedMs(metrics.workedMs);
       if (!creditedDays) return NextResponse.json({ error: "C-Off ke liye minimum 4.5 worked hours required hain" }, { status: 400 });
-      // 4.5h to <9h = 0.5 C-Off; >=9h = 1 C-Off. Maximum one credit/day.
+      // 4.5h to <8h = 0.5 C-Off; >=8h = 1 C-Off. Maximum one credit/day.
       // Credit is derived from attendance, never manually typed.
     }
 
@@ -108,6 +109,17 @@ export async function POST(req) {
       employee: employeeId, date, hours: settledHours, settlement, ratePerHour, amount,
       compOffDays: creditedDays, note: note || "", createdBy: session.user.id,
     });
+
+    await notifyEmployee({
+      employeeId,
+      eventKey: `overtime:${entry._id}:created`,
+      title: settlement === "comp-off" ? "C-Off Credited" : "Overtime Pay Added",
+      message: settlement === "comp-off"
+        ? `${date} ke work ke liye ${creditedDays} day C-Off credit add kiya gaya hai.${note ? ` Note: ${note}` : ""}`
+        : `${date} ke ${settledHours} overtime hour(s) ke liye ₹${Number(amount || 0).toLocaleString("en-IN")} pay add kiya gaya hai.${note ? ` Note: ${note}` : ""}`,
+      href: settlement === "comp-off" ? "/employee/leave" : "/employee/salary",
+    });
+
     return NextResponse.json({ entry, offDay }, { status: 201 });
   } catch (err) {
     console.error("POST /api/overtime error:", err);
