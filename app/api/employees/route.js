@@ -127,7 +127,7 @@ export async function POST(req) {
                     otherAllowance,
                     salaryHistory: [{ amount: salaryNumber, basicSalary, hra, otherAllowance, wageType, effectiveMonth: monthFromDate(body.dateOfJoining) || todayDateKey().slice(0, 7) }],
                     webAttendanceEnabled: true,
-                    fieldWorker: true,
+                    fieldWorker: body.fieldWorker === true,
                     address: body.address,
                     photoUrl: body.photoUrl,
                     bloodGroup: body.bloodGroup,

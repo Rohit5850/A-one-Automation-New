@@ -84,19 +84,16 @@ async function isLatePolicyWorkingDay(date) {
 
 async function employeeLocationRule(targetEmployeeId) {
   const employee = await Employee.findById(targetEmployeeId).select(
-    "fieldWorker webAttendanceEnabled showLocationToEmployee status"
+    "fieldWorker showLocationToEmployee status"
   );
+
   if (!employee || employee.status !== "active") {
     return { error: "Employee account is inactive" };
   }
 
-  // GPS is required for Field/Site Workers. If HR enables Employee Location View,
-  // GPS is also required from that point onward so there is an actual location
-  // to show in the employee attendance history.
   return {
     employee,
-    webAttendanceEnabled: employee.webAttendanceEnabled !== false,
-    locationRequired: !!employee.fieldWorker || !!employee.showLocationToEmployee,
+    locationRequired: !!employee.fieldWorker,
     canSeeLocation: !!employee.showLocationToEmployee,
   };
 }
@@ -201,7 +198,7 @@ export async function POST(req) {
       const rule = await employeeLocationRule(targetEmployeeId);
       if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
       visibility = rule.canSeeLocation;
-      if (!rule.webAttendanceEnabled) return NextResponse.json({ error: "Web Check In/Out HR ne disable kiya hai" }, { status: 403 });
+      // if (!rule.webAttendanceEnabled) return NextResponse.json({ error: "Web Check In/Out HR ne disable kiya hai" }, { status: 403 });
       if (rule.locationRequired && !rawLocation) {
         return NextResponse.json(
           { error: "Please select Allow for location. Only then Check-In or Check-Out is allowed." },
@@ -343,7 +340,7 @@ export async function PATCH(req) {
       const rule = await employeeLocationRule(targetEmployeeId);
       if (rule.error) return NextResponse.json({ error: rule.error }, { status: 403 });
       visibility = rule.canSeeLocation;
-      if (!rule.webAttendanceEnabled) return NextResponse.json({ error: "Web Check In/Out HR ne disable kiya hai" }, { status: 403 });
+      // if (!rule.webAttendanceEnabled) return NextResponse.json({ error: "Web Check In/Out HR ne disable kiya hai" }, { status: 403 });
       if (rule.locationRequired && !rawLocation) {
         return NextResponse.json(
           { error: "Please select Allow for location. Only then Check-In or Check-Out is allowed." },
@@ -372,18 +369,151 @@ export async function PATCH(req) {
     if (location) activeSession.checkOutLocation = location;
     record.checkOut = now;
     if (location) record.checkOutLocation = location;
-    if (record.statusSource !== "manual") {
-      const metrics = sessionMetrics(record.toObject());
-      record.status = record.latePenaltyHalfDay
-        ? "half-day"
-        : automaticWorkStatus(metrics.workedMs, false);
-      record.statusSource = "auto";
-      record.leaveType = null;
-      record.leaveFraction = 1;
-      record.reason = record.latePenaltyHalfDay
-        ? `Late policy: late arrival #${record.lateArrivalNumber || 4} this month`
-        : "";
-    }
+    // if (record.statusSource !== "manual") {
+    //   const metrics = sessionMetrics(record.toObject());
+    //   record.status = record.latePenaltyHalfDay
+    //     ? "half-day"
+    //     : automaticWorkStatus(metrics.workedMs, false);
+    //   record.statusSource = "auto";
+    //   record.leaveType = null;
+    //   record.leaveFraction = 1;
+    //   record.reason = record.latePenaltyHalfDay
+    //     ? `Late policy: late arrival #${record.lateArrivalNumber || 4} this month`
+    //     : "";
+    // }
+
+
+    const metrics = sessionMetrics(record.toObject());
+
+const automaticStatus = automaticWorkStatus(
+  metrics.workedMs,
+  false
+);
+
+const hasApprovedLeaveCoverage =
+  record.statusSource === "manual" &&
+  !!record.leaveType &&
+  ["leave", "half-day"].includes(record.status) &&
+  [0.5, 1].includes(Number(record.leaveFraction || 1));
+
+
+// ======================================================
+// APPROVED / MANUAL LEAVE + ACTUAL WORK
+// ======================================================
+
+if (hasApprovedLeaveCoverage) {
+
+  const originalLeaveType = record.leaveType;
+  const originalLeaveFraction = Number(
+    record.leaveFraction || 1
+  );
+  const originalReason = record.reason || "";
+
+
+  // ----------------------------------------------------
+  // Late penalty has priority over approved leave.
+  // Leave is restored; Half-Day is because of late policy.
+  // ----------------------------------------------------
+
+  if (record.latePenaltyHalfDay) {
+
+    record.status = "half-day";
+    record.statusSource = "auto";
+
+    record.leaveType = null;
+    record.leaveFraction = 1;
+
+    record.reason =
+      `Late policy: late arrival #${record.lateArrivalNumber || 4} this month`;
+
+  }
+
+
+  // ----------------------------------------------------
+  // WORKED >= 8 HOURS
+  // Full Present.
+  // Approved leave is not consumed.
+  // ----------------------------------------------------
+
+  else if (automaticStatus === "present") {
+
+    record.status = "present";
+    record.statusSource = "auto";
+
+    record.leaveType = null;
+    record.leaveFraction = 1;
+
+    record.reason = "";
+
+  }
+
+
+  // ----------------------------------------------------
+  // WORKED >= 4.5 HOURS AND < 8 HOURS
+  //
+  // Employee worked Half-Day.
+  // Remaining Half-Day is covered by approved leave.
+  // Only 0.5 leave is consumed.
+  // ----------------------------------------------------
+
+  else if (automaticStatus === "half-day") {
+
+    record.status = "half-day";
+    record.statusSource = "manual";
+
+    record.leaveType = originalLeaveType;
+    record.leaveFraction = 0.5;
+
+    record.reason = originalReason;
+
+  }
+
+
+  // ----------------------------------------------------
+  // WORKED < 4.5 HOURS
+  //
+  // Work is below minimum Half-Day threshold.
+  // Original approved leave remains applicable.
+  // ----------------------------------------------------
+
+  else {
+
+    record.status = "leave";
+    record.statusSource = "manual";
+
+    record.leaveType = originalLeaveType;
+    record.leaveFraction = originalLeaveFraction;
+
+    record.reason = originalReason;
+
+  }
+
+}
+
+
+// ======================================================
+// NORMAL ATTENDANCE - NO APPROVED LEAVE
+// ======================================================
+
+else if (record.statusSource !== "manual") {
+
+  record.status = record.latePenaltyHalfDay
+    ? "half-day"
+    : automaticStatus;
+
+  record.statusSource = "auto";
+
+  record.leaveType = null;
+  record.leaveFraction = 1;
+
+  record.reason = record.latePenaltyHalfDay
+    ? `Late policy: late arrival #${record.lateArrivalNumber || 4} this month`
+    : "";
+}
+
+
+
+
     await record.save();
 
     return NextResponse.json({

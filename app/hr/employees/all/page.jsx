@@ -40,14 +40,29 @@ function AllEmployeesInner() {
     useEffect(() => {
         load();
     }, []);
-    async function toggleWebAttendance(emp) {
-        const nextValue = !emp.webAttendanceEnabled;
-        const res = await fetch(`/api/employees/${emp._id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ webAttendanceEnabled: nextValue, fieldWorker: nextValue }) });
-        if (res.ok)
-            setEmployees((list) => list.map((x) => x._id === emp._id ? { ...x, webAttendanceEnabled: nextValue, fieldWorker: nextValue } : x));
-        else
-            alert("Web Check In/Out update nahi ho paya.");
-    }
+   async function toggleFieldWorker(emp) {
+  const nextValue = !emp.fieldWorker;
+
+  const res = await fetch(`/api/employees/${emp._id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      fieldWorker: nextValue
+    })
+  });
+
+  if (res.ok) {
+    setEmployees((list) =>
+      list.map((x) =>
+        x._id === emp._id
+          ? { ...x, fieldWorker: nextValue }
+          : x
+      )
+    );
+  } else {
+    alert("Field / Site Worker update nahi ho paya.");
+  }
+}
     async function toggleEmployeeLocation(emp) {
         const nextValue = !emp.showLocationToEmployee;
         setEmployees((current) => current.map((item) => item._id === emp._id ? { ...item, showLocationToEmployee: nextValue } : item));
@@ -160,7 +175,7 @@ function AllEmployeesInner() {
                 <button type="button" onClick={() => unlockEmployee(emp)} className="w-full rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">ID Unlock / Reset Password</button>
                 <p className="mt-1 text-[10px] text-slate-400">Resets to Aone@123 and forces password change on next login.</p>
               </div>
-              <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3"><div><p className="text-xs font-medium text-slate-700">Web Check In/Out</p><p className="text-[11px] text-slate-400">Web attendance + GPS requirement</p></div><button type="button" onClick={() => toggleWebAttendance(emp)} role="switch" aria-checked={!!emp.webAttendanceEnabled} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${emp.webAttendanceEnabled ? "bg-emerald-500" : "bg-slate-300"}`}><span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${emp.webAttendanceEnabled ? "translate-x-5" : "translate-x-0.5"}`}/></button></div>
+              <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3"> <div> <p className="text-xs font-medium text-slate-700"> Field / Site Worker </p> <p className="text-[11px] text-slate-400"> Require GPS for attendance </p> </div> <button type="button" onClick={() => toggleFieldWorker(emp)} role="switch" aria-checked={!!emp.fieldWorker} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${ emp.fieldWorker ? "bg-emerald-500" : "bg-slate-300" }`} > <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${ emp.fieldWorker ? "translate-x-5" : "translate-x-0.5" }`} /> </button> </div>
               <div className="mt-4 pt-3 border-t border-slate-100/80 flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-medium text-slate-700">Employee Location View</p>

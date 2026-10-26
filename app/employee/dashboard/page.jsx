@@ -136,9 +136,15 @@ export default function EmployeeDashboard() {
     }
   }, []);
 
-  useEffect(() => {
+ useEffect(() => {
+  loadDashboard();
+
+  const timer = setInterval(() => {
     loadDashboard();
-  }, [loadDashboard]);
+  }, 5000);
+
+  return () => clearInterval(timer);
+}, [loadDashboard]);
 
   const today = todayKey();
   const calendarToday = calendar.find((day) => day.date === today);
@@ -217,10 +223,11 @@ export default function EmployeeDashboard() {
           </span>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <Info label="Check-In" value={todayRecord?.checkIn ? formatTime24(todayRecord.checkIn) : "-"} />
           <Info label="Check-Out" value={todayRecord?.checkOut ? formatTime24(todayRecord.checkOut) : "-"} />
           <Info label="Worked" value={formatHours(todayRecord?.workedMs)} />
+          <Info label="Total Break" value={formatHours(todayRecord?.breakMs)} />
           <Info label="Extra Work" value={(todayRecord?.extraWorkMs || 0) > 0 ? formatHours(todayRecord.extraWorkMs) : "-"} />
           <Info label="Late" value={todayRecord?.lateArrival ? `Late #${todayRecord.lateArrivalNumber || "-"}${todayRecord.latePenaltyHalfDay ? " · Half-Day" : ""}` : "No"} />
         </div>

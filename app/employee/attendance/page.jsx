@@ -237,7 +237,7 @@ export default function EmployeeAttendancePage() {
         // Re-read the employee settings at the moment of attendance so an HR toggle
         // takes effect even if this page was already open in the employee's browser.
         const currentEmployee = await getFreshEmployee();
-        const mustCaptureLocation = !!currentEmployee?.fieldWorker || !!currentEmployee?.showLocationToEmployee || locationRequired;
+        const mustCaptureLocation = !!locationRequired;
         let location = null;
         if (mustCaptureLocation) {
             try {
@@ -400,23 +400,76 @@ export default function EmployeeAttendancePage() {
 
           {message && <p className="text-xs text-emerald-600 mb-2">{message}</p>}
 
-          {activeSession ? (<>
-              <p className="text-xs text-slate-500 mb-1">Since Check-in</p>
-              <p className="text-xl font-semibold text-slate-900 mb-3">
-                {liveDuration != null ? fmtHMS(liveDuration) : "-"}
-              </p>
-              <button onClick={handleClockOut} disabled={marking} className="w-full bg-red-500 text-white text-sm font-medium py-2 rounded-md hover:bg-red-600 disabled:opacity-60">
-                Web Clock-out
-              </button>
-            </>) : (<>
-              {todayRecord?.checkIn && (<p className="text-xs text-slate-500 mb-2">
-                  Worked: {fmtHM(todayRecord.workedMs || 0)} · Break: {fmtHM(todayRecord.breakMs || 0)}
-                  {(todayRecord.extraWorkMs || 0) > 0 ? ` · Extra Work: ${fmtHM(todayRecord.extraWorkMs)}` : ""}
-                </p>)}
-              <button onClick={handleClockIn} disabled={marking} className="w-full bg-emerald-600 text-white text-sm font-medium py-2 rounded-md hover:bg-emerald-700 disabled:opacity-60">
-                Web Clock-in
-              </button>
-            </>)}
+        
+
+
+
+           {todayRecord?.checkIn && (
+  <div className="mb-3 rounded-lg bg-slate-50 px-3 py-2">
+    <div className="grid grid-cols-3 gap-2 text-center">
+
+      <div>
+        <p className="text-[10px] uppercase text-slate-400">
+          Worked
+        </p>
+        <p className="text-sm font-semibold text-slate-700">
+          {fmtHM(todayRecord.workedMs || 0)}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase text-slate-400">
+          Total Break
+        </p>
+        <p className="text-sm font-semibold text-amber-700">
+          {fmtHM(todayRecord.breakMs || 0)}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-[10px] uppercase text-slate-400">
+          Extra Work
+        </p>
+        <p className="text-sm font-semibold text-violet-700">
+          {(todayRecord.extraWorkMs || 0) > 0
+            ? fmtHM(todayRecord.extraWorkMs)
+            : "0h 0m"}
+        </p>
+      </div>
+
+    </div>
+  </div>
+)}
+
+{activeSession ? (
+  <>
+    <p className="text-xs text-slate-500 mb-1">
+      Current Session
+    </p>
+
+    <p className="text-xl font-semibold text-slate-900 mb-3">
+      {liveDuration != null ? fmtHMS(liveDuration) : "-"}
+    </p>
+
+    <button
+      onClick={handleClockOut}
+      disabled={marking}
+      className="w-full bg-red-500 text-white text-sm font-medium py-2 rounded-md hover:bg-red-600 disabled:opacity-60"
+    >
+      Web Clock-out
+    </button>
+  </>
+) : (
+  <button
+    onClick={handleClockIn}
+    disabled={marking}
+    className="w-full bg-emerald-600 text-white text-sm font-medium py-2 rounded-md hover:bg-emerald-700 disabled:opacity-60"
+  >
+    Web Clock-in
+  </button>
+)}
+
+
         </div>
       </div>
 

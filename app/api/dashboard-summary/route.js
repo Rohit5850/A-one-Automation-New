@@ -62,10 +62,13 @@ export async function GET() {
         }
       }
 
-      if (holiday || isSunday) {
-        presentCount++; // paid day off, not "absent"
-        continue;
-      }
+     if (holiday || isSunday) {
+  if (rec?.checkIn) {
+    presentCount++;
+  }
+
+  continue;
+}
       if (rec?.status === "leave") {
         onLeaveToday.push({ id: emp._id, name: emp.fullName });
         continue;
