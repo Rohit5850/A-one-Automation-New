@@ -1,6 +1,7 @@
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import SiteChrome from "./Components/SiteChrome";
+import PlcTesterButton from "./Components/PlcTesterButton";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -84,6 +85,7 @@ export default function RootLayout({ children }) {
     >
       <body className="min-h-full flex flex-col">
         <SiteChrome>{children}</SiteChrome>
+        <PlcTesterButton /> 
       </body>
     </html>
   );
